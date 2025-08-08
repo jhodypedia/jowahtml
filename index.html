@@ -1,358 +1,784 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WA REST API — Control Panel</title>
+  <title>WA REST API — Dashboard</title>
+
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Toastr -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; margin: 16px; }
-    .cols { display: flex; gap: 16px; align-items: flex-start; }
-    .card { border: 1px solid #e1e4e8; padding: 12px; border-radius: 8px; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.03); }
-    .card.wide { flex: 1; }
-    img.qr { border: 1px solid #ddd; padding: 8px; background: #fafafa; }
-    pre.log { height: 320px; overflow: auto; background:#0f1720; color:#d1fae5; padding:8px; border-radius:6px;}
-    label { display:block; margin-top:8px; font-weight:600; }
-    input[type=text], textarea { width:100%; padding:8px; margin-top:6px; box-sizing:border-box; }
-    button { padding:8px 12px; margin-top:8px; cursor:pointer; }
-    .small { font-size:0.9em; color:#555; }
-    .row { display:flex; gap:8px; align-items:center; }
-    .msgs { max-height:320px; overflow:auto; border:1px solid #eee; padding:8px; border-radius:6px; background:#fbfbfb; }
-    .msg-item { border-bottom:1px solid #f0f0f0; padding:6px 0; }
-    .status { padding:6px 10px; border-radius:6px; display:inline-block; }
-    .status.ok { background:#e6ffed; color:#046c3b; }
-    .status.warn { background:#fff7e6; color:#7a4b00; }
+    :root{
+      --accent:#0d6efd;
+      --muted:#6c757d;
+      --card-bg: #ffffff;
+      --bg: linear-gradient(180deg,#eef7ff 0%, #ffffff 100%);
+    }
+    html,body{height:100%}
+    body{
+      font-family:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,Arial;
+      background:var(--bg);
+      color:#222;
+      margin:0;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+    }
+
+    /* layout */
+    .app {
+      display:flex;
+      min-height:100vh;
+      gap:20px;
+    }
+    .sidebar {
+      width:280px;
+      padding:20px;
+      box-shadow:0 6px 24px rgba(13, 110, 253, 0.06);
+      border-radius:14px;
+      background:linear-gradient(180deg,#fff,#f8fbff);
+      flex-shrink:0;
+    }
+    .content {
+      flex:1;
+      padding:24px;
+    }
+    .brand {
+      display:flex;
+      gap:12px;
+      align-items:center;
+      margin-bottom:12px;
+    }
+    .brand h2{margin:0; font-size:18px; color:var(--accent)}
+
+    .navlink {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      padding:10px 12px;
+      border-radius:10px;
+      color:#123;
+      margin-bottom:6px;
+      cursor:pointer;
+      text-decoration:none;
+    }
+    .navlink.active { background: rgba(13,110,253,0.08); color:var(--accent); font-weight:600; }
+    .navlink:hover { background: rgba(13,110,253,0.04); }
+
+    .card {
+      border: none;
+      border-radius:12px;
+      background:var(--card-bg);
+      box-shadow:0 6px 20px rgba(20,30,80,0.04);
+      padding:16px;
+    }
+
+    /* QR */
+    .qr-box { text-align:center; padding:18px; }
+    .qr-img { max-width:220px; width:100%; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); background:#fff; padding:8px; display:inline-block; }
+
+    /* small components */
+    .status-pill {
+      display:inline-block;
+      padding:6px 10px;
+      border-radius:999px;
+      font-weight:600;
+      font-size:13px;
+    }
+    .status-connected { background:#e6ffef; color:#0a8a55; }
+    .status-waiting { background:#fff7e6; color:#7a4b00; }
+    .status-offline { background:#ffeef0; color:#9b2c2c; }
+
+    /* logs */
+    .logs { height:320px; overflow:auto; background:#071226; color:#dff3e8; padding:10px; border-radius:8px; font-family:monospace; font-size:13px; }
+
+    /* responsive */
+    @media (max-width: 991px){
+      .app { flex-direction:column; padding:12px; }
+      .sidebar { width:100%; order:2; }
+      .content { order:1; }
+    }
+
+    /* helpers */
+    .muted { color:var(--muted); }
+    .mb8 { margin-bottom:8px; }
   </style>
 </head>
 <body>
-  <h1>WA REST API — Control Panel</h1>
-  <p class="small">Ganti <code>API_KEY</code> di bawah sesuai `.env` kamu. Pastikan server berjalan dan CORS mengizinkan origin ini.</p>
+  <div class="container-fluid py-4">
+    <div class="app">
 
-  <div class="cols">
-    <div class="card" style="width:360px">
-      <h3>1) QR Login</h3>
-      <div id="qrWrap">
-        <img id="qrImg" class="qr" width="300" alt="QR akan muncul di sini" />
-        <div id="qrHint" class="small">Menunggu QR...</div>
-      </div>
-      <div style="margin-top:8px">
-        <button id="refreshQrBtn">Refresh QR</button>
-        <button id="logoutBtn" style="margin-left:8px">Logout (clear auth)</button>
-      </div>
-
-      <hr/>
-
-      <h4>Connection</h4>
-      <div id="connState" class="status warn">Not connected</div>
-      <div class="small" id="connDetails"></div>
-    </div>
-
-    <div class="card wide">
-      <h3>2) Send Message</h3>
-
-      <div style="display:flex; gap:12px">
-        <div style="flex:1">
-          <label>JID (contoh: 628123456789@s.whatsapp.net)</label>
-          <input type="text" id="jidInput" placeholder="628...@s.whatsapp.net" />
-          <label>Pesan teks</label>
-          <textarea id="textInput" rows="3" placeholder="Isi pesan..."></textarea>
-          <div class="row">
-            <button id="sendTextBtn">Kirim Teks</button>
-            <button id="getChatsBtn">Refresh Chats</button>
+      <!-- SIDEBAR -->
+      <aside class="sidebar">
+        <div class="brand">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
+            <rect width="24" height="24" rx="6" fill="#0d6efd" />
+            <path d="M7 8h10M7 12h6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          <div>
+            <h2>WA REST API</h2>
+            <div class="muted" style="font-size:12px">Dashboard & Control</div>
           </div>
         </div>
 
-        <div style="width:320px">
-          <label>Kirim file (image/video/audio/document)</label>
-          <input type="file" id="fileInput" />
-          <label>Caption (opsional)</label>
-          <input type="text" id="captionInput" placeholder="Caption..." />
-          <div class="row">
-            <button id="sendMediaBtn">Kirim Media</button>
-            <span class="small" id="fileInfo"></span>
-          </div>
+        <nav class="mt-3">
+          <a class="navlink active" data-page="dashboard"><span>🏠</span> Dashboard</a>
+          <a class="navlink" data-page="send"><span>✉️</span> Send Message</a>
+          <a class="navlink" data-page="media"><span>📁</span> Send Media</a>
+          <a class="navlink" data-page="contacts"><span>👥</span> Contacts & Chats</a>
+          <a class="navlink" data-page="groups"><span>👪</span> Groups</a>
+          <a class="navlink" data-page="logs"><span>📝</span> Logs</a>
+        </nav>
+
+        <hr>
+
+        <div class="mb8">
+          <label class="form-label small">API Server</label>
+          <input id="inputApiUrl" class="form-control form-control-sm mb-2" value="http://151.240.0.221:3000" />
+          <label class="form-label small">API Key</label>
+          <input id="inputApiKey" class="form-control form-control-sm" placeholder="Your API key" />
         </div>
-      </div>
 
-      <hr/>
+        <div class="d-grid gap-2 mt-2">
+          <button id="btnConnect" class="btn btn-outline-primary btn-sm">Connect Events</button>
+          <button id="btnDisconnect" class="btn btn-outline-secondary btn-sm" disabled>Disconnect Events</button>
+          <button id="btnLogout" class="btn btn-danger btn-sm">Logout (Clear Auth)</button>
+        </div>
 
-      <h4>Chats</h4>
-      <div class="msgs" id="chatsList">Belum ada data</div>
-    </div>
+        <div class="mt-3 muted" style="font-size:12px">
+          <div>Version: <strong id="clientVersion">—</strong></div>
+          <div class="mt-1">Server: <span id="serverState">—</span></div>
+        </div>
+      </aside>
 
-    <div class="card" style="width:360px">
-      <h3>3) Events & Logs</h3>
-      <div style="display:flex; gap:8px; align-items:center;">
-        <label style="margin:0">API Key</label>
-        <input id="apiKeyInput" type="text" value="replace_with_your_api_key" style="flex:1" />
-      </div>
-      <div style="margin-top:8px">
-        <button id="connectEsBtn">Connect SSE</button>
-        <button id="disconnectEsBtn" disabled>Disconnect SSE</button>
-      </div>
+      <!-- CONTENT -->
+      <main class="content">
+        <!-- DASHBOARD -->
+        <section id="page-dashboard" class="page">
+          <div class="row g-3">
+            <div class="col-lg-4 col-md-6">
+              <div class="card">
+                <h5>QR Login</h5>
+                <div class="qr-box">
+                  <div id="qrWrap" class="mb-2">
+                    <img id="qrImage" class="qr-img" src="" alt="QR Code" />
+                  </div>
+                  <div id="qrHint" class="muted">Waiting for QR...</div>
+                  <div class="mt-3">
+                    <button id="btnRefreshQr" class="btn btn-outline-primary btn-sm">Refresh QR</button>
+                    <button id="btnClearQr" class="btn btn-outline-secondary btn-sm">Clear</button>
+                  </div>
+                </div>
+              </div>
+            </div>
 
-      <h4>Realtime log</h4>
-      <pre id="log" class="log">-- logs --</pre>
+            <div class="col-lg-8 col-md-6">
+              <div class="card mb-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h5 class="mb-0">Connection</h5>
+                  <div id="connPill" class="status-pill status-waiting">Not connected</div>
+                </div>
+                <div class="mt-3">
+                  <small class="muted">Last update:</small>
+                  <pre id="connInfo" class="muted" style="white-space:pre-wrap; background:transparent; border:none; padding:0; font-family:inherit"></pre>
+                </div>
+              </div>
 
-      <h4>Incoming messages</h4>
-      <div id="msgs" class="msgs"></div>
+              <div class="card">
+                <h5 class="mb-2">Realtime Logs</h5>
+                <div id="logs" class="logs"></div>
+                <div class="mt-2 d-flex gap-2">
+                  <button id="btnClearLogs" class="btn btn-sm btn-outline-secondary">Clear Logs</button>
+                  <button id="btnDownloadLogs" class="btn btn-sm btn-outline-primary">Download</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SEND MESSAGE -->
+        <section id="page-send" class="page" style="display:none;">
+          <div class="card">
+            <h5>Send Text Message</h5>
+            <form id="formSend">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label small">JID</label>
+                  <input id="sendJid" class="form-control" placeholder="628123456789@s.whatsapp.net" required />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Delay (ms, optional)</label>
+                  <input id="sendDelay" class="form-control" placeholder="0" type="number" min="0" />
+                </div>
+                <div class="col-12">
+                  <label class="form-label small">Message</label>
+                  <textarea id="sendText" class="form-control" rows="4" required></textarea>
+                </div>
+                <div class="col-12 d-flex gap-2 mt-2">
+                  <button class="btn btn-primary" type="submit">Send</button>
+                  <button id="btnPreview" class="btn btn-outline-secondary" type="button">Preview</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- SEND MEDIA -->
+        <section id="page-media" class="page" style="display:none;">
+          <div class="card">
+            <h5>Send Media</h5>
+            <form id="formMedia">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label small">JID</label>
+                  <input id="mediaJid" class="form-control" placeholder="628123...@s.whatsapp.net" required />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Caption (optional)</label>
+                  <input id="mediaCaption" class="form-control" />
+                </div>
+                <div class="col-12">
+                  <label class="form-label small">File</label>
+                  <input id="mediaFile" type="file" class="form-control" required />
+                </div>
+                <div class="col-12 d-flex gap-2 mt-2">
+                  <button class="btn btn-info text-white" type="submit">Send Media</button>
+                  <button id="btnPreviewFile" class="btn btn-outline-secondary" type="button">Preview File</button>
+                </div>
+                <div class="col-12" id="filePreviewArea" style="display:none; margin-top:10px;"></div>
+              </div>
+            </form>
+          </div>
+        </section>
+
+        <!-- CONTACTS & CHATS -->
+        <section id="page-contacts" class="page" style="display:none;">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="card">
+                <h5>Contacts</h5>
+                <div id="contactsList" style="max-height:420px; overflow:auto;"></div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="card">
+                <h5>Chats</h5>
+                <div id="chatsList" style="max-height:420px; overflow:auto;"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- GROUPS -->
+        <section id="page-groups" class="page" style="display:none;">
+          <div class="card">
+            <h5>Group Management</h5>
+            <form id="formCreateGroup" class="mb-3">
+              <div class="row g-2">
+                <div class="col-md-6">
+                  <label class="form-label small">Subject</label>
+                  <input id="groupSubject" class="form-control" required />
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small">Participants (comma separated JIDs)</label>
+                  <input id="groupParticipants" class="form-control" placeholder="628xxx@s.whatsapp.net, 628yyy@s.whatsapp.net" />
+                </div>
+                <div class="col-12 mt-2">
+                  <button class="btn btn-primary" type="submit">Create Group</button>
+                </div>
+              </div>
+            </form>
+
+            <form id="formAcceptInvite">
+              <div class="row g-2">
+                <div class="col-md-8">
+                  <label class="form-label small">Invite Code / Link</label>
+                  <input id="inviteCode" class="form-control" />
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                  <button class="btn btn-secondary w-100" type="submit">Accept Invite</button>
+                </div>
+              </div>
+            </form>
+
+            <div id="groupsResult" style="margin-top:12px"></div>
+          </div>
+        </section>
+
+        <!-- LOGS PAGE -->
+        <section id="page-logs" class="page" style="display:none;">
+          <div class="card">
+            <h5>Full Event Logs</h5>
+            <div id="fullLogs" class="logs"></div>
+            <div class="mt-2">
+              <button id="btnClearFullLogs" class="btn btn-sm btn-outline-secondary">Clear</button>
+              <button id="btnDownloadFullLogs" class="btn btn-sm btn-outline-primary">Download</button>
+            </div>
+          </div>
+        </section>
+
+      </main>
     </div>
   </div>
 
+  <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+
   <script>
-    // CONFIG
-    let API_KEY = document.getElementById('apiKeyInput').value.trim(); // user can edit on UI
-    const BASE = 'http://151.240.0.221:3000'; // jika backend di origin sama, biarkan ''; atau masukkan full URL mis. 'https://example.com'
-    const QR_POLL_INTERVAL = 3000; // ms (fallback)
-    const USE_POLL_FOR_QR = false; // kita rely SSE 'qr' event mostly; kalau ingin polling ubah true
+  /**********************
+   * CONFIG + STATE
+   **********************/
+  let API_URL = document.getElementById('inputApiUrl').value.replace(/\/$/, '');
+  let API_KEY = 'x4rc0d3';
+  let es = null; // EventSource
+  let logsBuffer = [];
+  const MAX_LOGS = 1000;
 
-    // ELEMENTS
-    const qrImg = document.getElementById('qrImg');
-    const qrHint = document.getElementById('qrHint');
-    const connState = document.getElementById('connState');
-    const connDetails = document.getElementById('connDetails');
-    const logEl = document.getElementById('log');
-    const msgsEl = document.getElementById('msgs');
-    const chatsList = document.getElementById('chatsList');
-    const apiKeyInput = document.getElementById('apiKeyInput');
+  // UI refs
+  const navlinks = document.querySelectorAll('.navlink');
+  const pages = document.querySelectorAll('.page');
+  const inputApiKey = document.getElementById('inputApiKey');
+  const btnConnect = document.getElementById('btnConnect');
+  const btnDisconnect = document.getElementById('btnDisconnect');
+  const btnLogout = document.getElementById('btnLogout');
+  const qrImage = document.getElementById('qrImage');
+  const qrHint = document.getElementById('qrHint');
+  const connPill = document.getElementById('connPill');
+  const connInfo = document.getElementById('connInfo');
+  const logsEl = document.getElementById('logs');
+  const fullLogsEl = document.getElementById('fullLogs');
+  const btnClearLogs = document.getElementById('btnClearLogs');
+  const btnDownloadLogs = document.getElementById('btnDownloadLogs');
+  const btnClearFullLogs = document.getElementById('btnClearFullLogs');
+  const btnDownloadFullLogs = document.getElementById('btnDownloadFullLogs');
+  const btnRefreshQr = document.getElementById('btnRefreshQr');
+  const btnClearQr = document.getElementById('btnClearQr');
 
-    // forms
-    const jidInput = document.getElementById('jidInput');
-    const textInput = document.getElementById('textInput');
-    const sendTextBtn = document.getElementById('sendTextBtn');
-    const getChatsBtn = document.getElementById('getChatsBtn');
-    const fileInput = document.getElementById('fileInput');
-    const sendMediaBtn = document.getElementById('sendMediaBtn');
-    const captionInput = document.getElementById('captionInput');
-    const fileInfo = document.getElementById('fileInfo');
-    const refreshQrBtn = document.getElementById('refreshQrBtn');
-    const logoutBtn = document.getElementById('logoutBtn');
-    const connectEsBtn = document.getElementById('connectEsBtn');
-    const disconnectEsBtn = document.getElementById('disconnectEsBtn');
+  // pages elements
+  const formSend = document.getElementById('formSend');
+  const sendJid = document.getElementById('sendJid');
+  const sendText = document.getElementById('sendText');
+  const sendDelay = document.getElementById('sendDelay');
 
-    // state
-    let es = null;
-    let lastQrDataUrl = null;
+  const formMedia = document.getElementById('formMedia');
+  const mediaJid = document.getElementById('mediaJid');
+  const mediaFile = document.getElementById('mediaFile');
+  const mediaCaption = document.getElementById('mediaCaption');
+  const filePreviewArea = document.getElementById('filePreviewArea');
 
-    function log(...args) {
-      const line = '[' + new Date().toLocaleTimeString() + '] ' + args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
-      logEl.textContent = line + '\n' + logEl.textContent;
+  const contactsList = document.getElementById('contactsList');
+  const chatsList = document.getElementById('chatsList');
+
+  const formCreateGroup = document.getElementById('formCreateGroup');
+  const formAcceptInvite = document.getElementById('formAcceptInvite');
+  const groupsResult = document.getElementById('groupsResult');
+
+  /**********************
+   * Helpers
+   **********************/
+  function appendLog(msgObj) {
+    const ts = new Date().toISOString();
+    const line = `[${ts}] ${typeof msgObj === 'string' ? msgObj : JSON.stringify(msgObj)}`;
+    logsBuffer.unshift(line);
+    if (logsBuffer.length > MAX_LOGS) logsBuffer.pop();
+    renderLogs();
+  }
+
+  function renderLogs() {
+    logsEl.textContent = logsBuffer.slice(0, 200).join('\\n');
+    fullLogsEl.textContent = logsBuffer.join('\\n');
+  }
+
+  function setConnStatus(status, info) {
+    connPill.textContent = status;
+    connInfo.textContent = info ? JSON.stringify(info, null, 2) : '';
+    connPill.className = 'status-pill ' + (status === 'Connected' ? 'status-connected' : status === 'Waiting QR' ? 'status-waiting' : 'status-offline');
+  }
+
+  function notifySuccess(msg) { toastr.success(msg); }
+  function notifyError(msg) { toastr.error(msg); }
+  function notifyInfo(msg) { toastr.info(msg); }
+
+  function getApiHeaders() {
+    return { 'x-api-key': API_KEY, 'Accept': 'application/json' };
+  }
+
+  /**********************
+   * Navigation
+   **********************/
+  navlinks.forEach(a=>{
+    a.addEventListener('click', ()=> {
+      navlinks.forEach(n=>n.classList.remove('active'));
+      a.classList.add('active');
+      const page = a.dataset.page;
+      pages.forEach(p=>p.style.display = (p.id === 'page-' + page ? '' : 'none'));
+      // fetch page data lazily
+      if (page === 'contacts') fetchContactsAndChats();
+      if (page === 'logs') renderLogs();
+    });
+  });
+
+  /**********************
+   * EventSource (SSE) handling
+   **********************/
+  function connectEvents() {
+    API_URL = document.getElementById('inputApiUrl').value.replace(/\/$/, '');
+    API_KEY = inputApiKey.value.trim();
+    if (!API_KEY) { notifyError('Please set API key'); return; }
+    if (!API_URL) { notifyError('Please set API URL'); return; }
+
+    // close existing
+    disconnectEvents();
+
+    const sseUrl = `${API_URL}/events?api_key=${encodeURIComponent(API_KEY)}`;
+    try {
+      es = new EventSource(sseUrl);
+    } catch (e) {
+      notifyError('SSE not available in this environment');
+      return;
     }
 
-    // update API_KEY when user edits
-    apiKeyInput.addEventListener('change', () => {
-      API_KEY = apiKeyInput.value.trim();
-      log('API key updated');
+    es.onopen = () => {
+      appendLog('SSE connected');
+      notifySuccess('Realtime connected');
+      document.getElementById('btnConnect').disabled = true;
+      document.getElementById('btnDisconnect').disabled = false;
+    };
+
+    es.onerror = (err) => {
+      appendLog('SSE error: ' + JSON.stringify(err));
+      // don't auto-close - EventSource will retry by default
+    };
+
+    es.addEventListener('qr', e => {
+      let payload;
+      try { payload = JSON.parse(e.data); } catch (err) { payload = { dataUrl: e.data }; }
+      appendLog({ type: 'qr', payload });
+      if (payload?.dataUrl) {
+        qrImage.src = payload.dataUrl;
+        qrHint.textContent = 'Scan with WhatsApp';
+        setConnStatus('Waiting QR', payload);
+      }
     });
 
-    // fetch QR endpoint (fallback)
-    async function fetchQrOnce() {
-      if (!API_KEY) { log('No API key'); return; }
-      try {
-        const res = await fetch(BASE + '/auth/qr', {
-          headers: { 'x-api-key': API_KEY }
-        });
-        const j = await res.json();
-        if (j.ok && j.qrDataUrl) {
-          setQr(j.qrDataUrl);
-        } else {
-          log('No QR available', j);
-          if (j.message) qrHint.textContent = j.message;
-        }
-      } catch (err) {
-        log('fetchQr error', String(err));
+    es.addEventListener('connection.update', e => {
+      let payload = JSON.parse(e.data);
+      appendLog({ type: 'connection.update', payload });
+      // update UI based on payload
+      const conn = payload?.connection || payload;
+      if (conn === 'open' || (payload?.connection === 'open')) {
+        setConnStatus('Connected', payload);
+        qrImage.src = '';
+        qrHint.textContent = 'Connected';
+        notifySuccess('WhatsApp connected');
+      } else if (payload?.qr) {
+        setConnStatus('Waiting QR', payload);
+      } else {
+        setConnStatus('Not connected', payload);
       }
-    }
+    });
 
-    function setQr(dataUrl) {
-      if (!dataUrl) {
-        qrImg.src = '';
-        qrHint.textContent = 'Tidak ada QR (mungkin sudah terhubung)';
-        connState.textContent = 'Connected';
-        connState.className = 'status ok';
-        return;
-      }
-      lastQrDataUrl = dataUrl;
-      qrImg.src = dataUrl;
-      qrHint.textContent = 'Scan QR dengan WhatsApp (via ponsel) untuk pairing';
-      connState.textContent = 'Awaiting QR';
-      connState.className = 'status warn';
-      log('QR displayed');
-    }
+    es.addEventListener('messages.upsert', e => {
+      const payload = JSON.parse(e.data);
+      appendLog({ type: 'messages.upsert', payload });
+      // show toast for incoming message
+      notifyInfo('Incoming message (see logs)');
+    });
 
-    // SSE (EventSource) connection
-    function connectSse() {
-      if (!API_KEY) { alert('Masukkan API_KEY di panel kanan'); return; }
-      if (es) { log('SSE already connected'); return; }
-      // pass api_key as query param because browsers can't set headers on EventSource
-      const url = (BASE || '') + '/events?api_key=' + encodeURIComponent(API_KEY);
-      es = new EventSource(url);
-      log('Connecting SSE to ' + url);
+    es.addEventListener('presence.update', e => {
+      const payload = JSON.parse(e.data);
+      appendLog({ type: 'presence.update', payload });
+    });
 
-      es.addEventListener('open', () => {
-        log('SSE open');
-        connectEsBtn.disabled = true;
-        disconnectEsBtn.disabled = false;
-      });
+    // additional events forwarded by server
+    es.addEventListener('messages.delete', e => {
+      appendLog({ type: 'messages.delete', payload: JSON.parse(e.data) });
+    });
+  }
 
-      es.addEventListener('qr', e => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.dataUrl) setQr(data.dataUrl);
-          log('Event qr', data);
-        } catch (err) { log('qr parse err', err); }
-      });
-
-      es.addEventListener('connection.update', e => {
-        try {
-          const data = JSON.parse(e.data);
-          log('connection.update', data);
-          const conn = data?.connection || data?.connection?.state || JSON.stringify(data);
-          const status = data?.connection === 'open' ? 'Connected' : (data?.connection || 'Unknown');
-          connState.textContent = status;
-          connState.className = (status === 'Connected') ? 'status ok' : 'status warn';
-          connDetails.textContent = JSON.stringify(data);
-          if (data?.connection === 'open') {
-            qrImg.src = '';
-            qrHint.textContent = 'Terhubung';
-          }
-        } catch (err) { log('conn.update parse err', err); }
-      });
-
-      es.addEventListener('messages.upsert', e => {
-        try {
-          const data = JSON.parse(e.data);
-          log('messages.upsert', data);
-          displayIncoming(data);
-        } catch (err) { log('msg parse err', err); }
-      });
-
-      es.addEventListener('presence.update', e => {
-        log('presence.update', e.data);
-      });
-
-      es.addEventListener('error', e => {
-        log('SSE error', e);
-        // EventSource will auto-retry; we keep connection handle
-      });
-    }
-
-    function disconnectSse() {
-      if (!es) return;
+  function disconnectEvents() {
+    if (es) {
       es.close();
       es = null;
-      connectEsBtn.disabled = false;
-      disconnectEsBtn.disabled = true;
-      log('SSE disconnected');
+      appendLog('SSE disconnected');
+      notifyInfo('Realtime disconnected');
+      document.getElementById('btnConnect').disabled = false;
+      document.getElementById('btnDisconnect').disabled = true;
     }
+  }
 
-    connectEsBtn.addEventListener('click', connectSse);
-    disconnectEsBtn.addEventListener('click', disconnectSse);
+  btnConnect.addEventListener('click', connectEvents);
+  btnDisconnect.addEventListener('click', disconnectEvents);
 
-    // send text
-    sendTextBtn.addEventListener('click', async () => {
-      const jid = jidInput.value.trim();
-      const text = textInput.value.trim();
-      if (!jid || !text) { alert('JID & text required'); return; }
-      try {
-        const res = await fetch(BASE + '/messages/send', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
-          body: JSON.stringify({ jid, text })
-        });
-        const j = await res.json();
-        log('sendText response', j);
-        if (j.ok) { textInput.value = ''; }
-      } catch (err) { log('sendText err', String(err)); }
-    });
-
-    // send media
-    fileInput.addEventListener('change', () => {
-      const f = fileInput.files[0];
-      if (f) fileInfo.textContent = `${f.name} (${Math.round(f.size/1024)} KB)`;
-      else fileInfo.textContent = '';
-    });
-
-    sendMediaBtn.addEventListener('click', async () => {
-      const jid = jidInput.value.trim();
-      if (!jid) { alert('JID required'); return; }
-      const f = fileInput.files[0];
-      if (!f) { alert('Pilih file'); return; }
-      const caption = captionInput.value || '';
-      const form = new FormData();
-      form.append('jid', jid);
-      form.append('caption', caption);
-      form.append('file', f, f.name);
-
-      try {
-        const res = await fetch(BASE + '/messages/sendmedia', {
-          method: 'POST',
-          headers: { 'x-api-key': API_KEY },
-          body: form
-        });
-        const j = await res.json();
-        log('sendMedia response', j);
-      } catch (err) {
-        log('sendMedia error', String(err));
+  /**********************
+   * Basic API actions
+   **********************/
+  async function fetchQr() {
+    try {
+      const res = await fetch(`${API_URL}/auth/qr`, { headers: getApiHeaders() });
+      const j = await res.json();
+      if (j.ok && j.qrDataUrl) {
+        qrImage.src = j.qrDataUrl;
+        qrHint.textContent = 'Scan with WhatsApp';
+        appendLog('Fetched QR');
+        setConnStatus('Waiting QR', {});
+      } else {
+        appendLog('No QR available: ' + JSON.stringify(j));
+        if (j.message) qrHint.textContent = j.message;
       }
-    });
+    } catch (err) {
+      appendLog('fetchQr error: ' + err);
+      notifyError('Cannot fetch QR — check server/API key/CORS');
+    }
+  }
 
-    // refresh qr button (fallback)
-    refreshQrBtn.addEventListener('click', fetchQrOnce);
+  document.getElementById('btnRefreshQr').addEventListener('click', fetchQr);
+  document.getElementById('btnClearQr').addEventListener('click', ()=>{ qrImage.src=''; qrHint.textContent='Cleared'; });
 
-    // logout button
-    logoutBtn.addEventListener('click', async () => {
-      if (!confirm('Logout dan hapus credential auth?')) return;
-      try {
-        const res = await fetch(BASE + '/auth/logout', { method: 'POST', headers: { 'x-api-key': API_KEY } });
-        const j = await res.json();
-        log('logout', j);
-      } catch (err) { log('logout err', String(err)); }
-    });
+  async function sendTextMessage(jid, text) {
+    try {
+      const res = await fetch(`${API_URL}/messages/send`, {
+        method: 'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, getApiHeaders()),
+        body: JSON.stringify({ jid, text })
+      });
+      const j = await res.json();
+      appendLog({ action:'sendText', jid, result: j });
+      if (j.ok) notifySuccess('Message sent');
+      else notifyError('Send failed: ' + (j.error || JSON.stringify(j)));
+      return j;
+    } catch (err) {
+      appendLog('sendText error: ' + err);
+      notifyError('Send failed — network/server error');
+      throw err;
+    }
+  }
 
-    // fetch chats
-    getChatsBtn.addEventListener('click', async () => {
-      try {
-        const res = await fetch(BASE + '/chats', { headers: { 'x-api-key': API_KEY } });
-        const j = await res.json();
-        log('chats', j);
-        if (j.ok && Array.isArray(j.chats)) {
-          renderChats(j.chats);
-        } else {
-          chatsList.textContent = JSON.stringify(j, null, 2);
-        }
-      } catch (err) { log('getChats err', String(err)); }
-    });
+  formSend.addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const jid = sendJid.value.trim();
+    const text = sendText.value.trim();
+    const delay = Math.max(0, Number(sendDelay.value) || 0);
+    if (!jid || !text) { notifyError('JID & message required'); return; }
+    if (delay > 0) {
+      notifyInfo('Will send after ' + delay + ' ms');
+      setTimeout(()=> sendTextMessage(jid, text), delay);
+    } else {
+      sendTextMessage(jid, text);
+    }
+  });
 
-    function renderChats(chats) {
-      if (!Array.isArray(chats) || chats.length === 0) { chatsList.textContent = 'No chats'; return; }
-      chatsList.innerHTML = chats.map(c => {
-        let id = c?.id?.id || c?.id || c?.conversation || JSON.stringify(c);
-        let name = c?.name || c?.contact?.name || '';
-        return `<div><strong>${id}</strong><div class="small">${name}</div></div>`;
-      }).join('<hr/>');
+  // Send media
+  async function sendMediaFormData(jid, file, caption) {
+    const fd = new FormData();
+    fd.append('jid', jid);
+    fd.append('caption', caption || '');
+    fd.append('file', file, file.name);
+    try {
+      const res = await fetch(`${API_URL}/messages/sendmedia`, {
+        method: 'POST',
+        headers: { 'x-api-key': API_KEY }, // do not set Content-Type — browser sets multipart boundary
+        body: fd
+      });
+      const j = await res.json();
+      appendLog({ action:'sendMedia', file: file.name, result:j });
+      if (j.ok) notifySuccess('Media sent');
+      else notifyError('Send media failed: ' + (j.error || JSON.stringify(j)));
+      return j;
+    } catch (err) {
+      appendLog('sendMedia error: ' + err);
+      notifyError('Send media failed — network/server error');
+      throw err;
+    }
+  }
+
+  formMedia.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    const jid = mediaJid.value.trim();
+    const file = mediaFile.files[0];
+    const caption = mediaCaption.value.trim();
+    if (!jid || !file) { notifyError('JID & file required'); return; }
+    await sendMediaFormData(jid, file, caption);
+  });
+
+  // file preview
+  document.getElementById('btnPreviewFile').addEventListener('click', async ()=>{
+    const f = mediaFile.files[0];
+    if (!f) { notifyError('Choose a file first'); return; }
+    const url = URL.createObjectURL(f);
+    filePreviewArea.style.display = '';
+    if (f.type.startsWith('image/')) {
+      filePreviewArea.innerHTML = '<img src="'+url+'" style="max-width:100%; border-radius:8px;" />';
+    } else {
+      filePreviewArea.innerHTML = '<div class="muted">File: '+f.name+' ('+Math.round(f.size/1024)+' KB)</div>';
+    }
+    notifyInfo('Preview ready (local)');
+  });
+
+  /**********************
+   * Contacts & Chats
+   **********************/
+  async function fetchContactsAndChats() {
+    try {
+      const resC = await fetch(`${API_URL}/contacts`, { headers: getApiHeaders() });
+      const cjson = await resC.json();
+      if (cjson.ok) {
+        renderContacts(cjson.contacts || []);
+      } else {
+        contactsList.innerHTML = '<div class="muted">No contacts: '+JSON.stringify(cjson)+'</div>';
+      }
+    } catch (err) {
+      contactsList.innerHTML = '<div class="muted">Failed to fetch contacts</div>';
     }
 
-    function displayIncoming(data) {
-      // messages.upsert payload shape varies — show raw for now
-      const div = document.createElement('div');
-      div.className = 'msg-item';
-      div.textContent = JSON.stringify(data, null, 2);
-      msgsEl.prepend(div);
+    try {
+      const res = await fetch(`${API_URL}/chats`, { headers: getApiHeaders() });
+      const j = await res.json();
+      if (j.ok) renderChats(j.chats || []);
+      else chatsList.innerHTML = '<div class="muted">No chats: '+JSON.stringify(j)+'</div>';
+    } catch (err) {
+      chatsList.innerHTML = '<div class="muted">Failed to fetch chats</div>';
     }
+  }
 
-    // auto poll QR when SSE not used
-    if (USE_POLL_FOR_QR) {
-      setInterval(() => {
-        if (!es) fetchQrOnce();
-      }, QR_POLL_INTERVAL);
+  function renderContacts(contacts) {
+    if (!contacts || contacts.length === 0) { contactsList.innerHTML = '<div class="muted">No contacts</div>'; return; }
+    contactsList.innerHTML = contacts.map(c=>{
+      const name = c.notify || c.name || c.vname || '';
+      const id = c.id || c.jid || (c.key && c.key.remoteJid) || '';
+      return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${name}</strong><div class="muted small">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="fillJid('${id}')">Use</button></div></div>`;
+    }).join('');
+  }
+
+  function renderChats(chats) {
+    if (!chats || chats.length === 0) { chatsList.innerHTML = '<div class="muted">No chats</div>'; return; }
+    chatsList.innerHTML = chats.map(c=>{
+      const id = (c.id && (c.id.id || c.id)) || c.conversation || JSON.stringify(c);
+      const subject = c.name || c.topic || c.contact?.name || '';
+      return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${subject||id}</strong><div class="muted small">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="fillJid('${id}')">Use</button></div></div>`;
+    }).join('');
+  }
+
+  // make fillJid accessible to buttons
+  window.fillJid = function(jid) {
+    sendJid.value = jid;
+    mediaJid.value = jid;
+    notifyInfo('JID filled: ' + jid);
+  };
+
+  /**********************
+   * Groups
+   **********************/
+  formCreateGroup.addEventListener('submit', async (ev)=> {
+    ev.preventDefault();
+    const subject = document.getElementById('groupSubject').value.trim();
+    const partsRaw = document.getElementById('groupParticipants').value.trim();
+    const participants = partsRaw ? partsRaw.split(',').map(s=>s.trim()) : [];
+    if (!subject || participants.length === 0) { notifyError('Subject & participants required'); return; }
+    try {
+      const res = await fetch(`${API_URL}/groups/create`, {
+        method:'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, getApiHeaders()),
+        body: JSON.stringify({ subject, participants })
+      });
+      const j = await res.json();
+      groupsResult.innerText = JSON.stringify(j, null, 2);
+      if (j.ok) notifySuccess('Group created');
+      else notifyError('Create group failed');
+    } catch (err) {
+      groupsResult.innerText = String(err);
+      notifyError('Create group error');
     }
+  });
 
-    // on load: prefill API key field with example (user should replace)
-    document.addEventListener('DOMContentLoaded', () => {
-      // keep API_KEY in sync with field
-      API_KEY = apiKeyInput.value.trim();
-      log('Panel ready — set API_KEY and press "Connect SSE"');
-    });
+  formAcceptInvite.addEventListener('submit', async (ev)=> {
+    ev.preventDefault();
+    const inviteCode = document.getElementById('inviteCode').value.trim();
+    if (!inviteCode) { notifyError('Invite code required'); return; }
+    try {
+      const res = await fetch(`${API_URL}/groups/accept`, {
+        method:'POST',
+        headers: Object.assign({'Content-Type':'application/json'}, getApiHeaders()),
+        body: JSON.stringify({ inviteCode })
+      });
+      const j = await res.json();
+      groupsResult.innerText = JSON.stringify(j, null, 2);
+      if (j.ok) notifySuccess('Accepted invite');
+      else notifyError('Accept failed');
+    } catch (err) {
+      groupsResult.innerText = String(err);
+      notifyError('Accept error');
+    }
+  });
+
+  /**********************
+   * Logout / state / misc
+   **********************/
+  btnLogout.addEventListener('click', async ()=>{
+    if (!confirm('Logout and clear auth on server?')) return;
+    try {
+      const res = await fetch(`${API_URL}/auth/logout`, { method:'POST', headers: getApiHeaders() });
+      const j = await res.json();
+      appendLog({ action:'logout', result:j });
+      if (j.ok) notifySuccess('Logged out');
+      else notifyError('Logout failed');
+    } catch (err) {
+      appendLog('logout error: ' + err);
+      notifyError('Logout network error');
+    }
+  });
+
+  // server / state polling (light)
+  async function fetchState() {
+    try {
+      const res = await fetch(`${API_URL}/state`, { headers: getApiHeaders() });
+      const j = await res.json();
+      if (j.ok) {
+        document.getElementById('serverState').innerText = j.state ? 'ok' : 'unknown';
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  // logs controls
+  btnClearLogs.addEventListener('click', ()=>{ logsBuffer = []; renderLogs(); notifyInfo('Logs cleared'); });
+  btnDownloadLogs.addEventListener('click', ()=> {
+    const blob = new Blob([logsBuffer.join('\\n')], { type:'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'wa-logs.txt'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  btnClearFullLogs.addEventListener('click', ()=>{ logsBuffer = []; renderLogs(); notifyInfo('Full logs cleared'); });
+  btnDownloadFullLogs.addEventListener('click', ()=> {
+    const blob = new Blob([logsBuffer.join('\\n')], { type:'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'wa-full-logs.txt'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  // initial UI state
+  (function init(){
+    toastr.options = { positionClass: 'toast-bottom-right', timeOut: 3000 };
+    document.getElementById('clientVersion').innerText = '1.0';
+    setConnStatus('Not connected', null);
+    renderLogs();
+    // auto-fill API_KEY from localStorage if present
+    const storedKey = localStorage.getItem('wa_api_key');
+    if (storedKey) { inputApiKey.value = storedKey; API_KEY = storedKey; }
+    inputApiKey.addEventListener('change', ()=>{ API_KEY = inputApiKey.value.trim(); localStorage.setItem('wa_api_key', API_KEY); });
+    // auto-refresh state periodically
+    setInterval(fetchState, 15_000);
+  })();
+
+  // expose for debug
+  window._APP = { appendLog, logsBuffer };
   </script>
 </body>
 </html>
