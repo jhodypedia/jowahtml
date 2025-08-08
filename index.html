@@ -1,784 +1,504 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WA REST API — Dashboard</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>WA REST API — Socket.IO Frontend</title>
 
   <!-- Google Font -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
 
-  <!-- Bootstrap CSS -->
+  <!-- Bootstrap -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
   <!-- Toastr -->
   <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
 
   <style>
-    :root{
-      --accent:#0d6efd;
-      --muted:#6c757d;
-      --card-bg: #ffffff;
-      --bg: linear-gradient(180deg,#eef7ff 0%, #ffffff 100%);
-    }
-    html,body{height:100%}
-    body{
-      font-family:'Poppins',system-ui,-apple-system,"Segoe UI",Roboto,Arial;
-      background:var(--bg);
-      color:#222;
-      margin:0;
-      -webkit-font-smoothing:antialiased;
-      -moz-osx-font-smoothing:grayscale;
-    }
-
-    /* layout */
-    .app {
-      display:flex;
-      min-height:100vh;
-      gap:20px;
-    }
-    .sidebar {
-      width:280px;
-      padding:20px;
-      box-shadow:0 6px 24px rgba(13, 110, 253, 0.06);
-      border-radius:14px;
-      background:linear-gradient(180deg,#fff,#f8fbff);
-      flex-shrink:0;
-    }
-    .content {
-      flex:1;
-      padding:24px;
-    }
-    .brand {
-      display:flex;
-      gap:12px;
-      align-items:center;
-      margin-bottom:12px;
-    }
-    .brand h2{margin:0; font-size:18px; color:var(--accent)}
-
-    .navlink {
-      display:flex;
-      align-items:center;
-      gap:12px;
-      padding:10px 12px;
-      border-radius:10px;
-      color:#123;
-      margin-bottom:6px;
-      cursor:pointer;
-      text-decoration:none;
-    }
-    .navlink.active { background: rgba(13,110,253,0.08); color:var(--accent); font-weight:600; }
-    .navlink:hover { background: rgba(13,110,253,0.04); }
-
-    .card {
-      border: none;
-      border-radius:12px;
-      background:var(--card-bg);
-      box-shadow:0 6px 20px rgba(20,30,80,0.04);
-      padding:16px;
-    }
-
-    /* QR */
-    .qr-box { text-align:center; padding:18px; }
-    .qr-img { max-width:220px; width:100%; border-radius:12px; box-shadow:0 6px 18px rgba(0,0,0,0.06); background:#fff; padding:8px; display:inline-block; }
-
-    /* small components */
-    .status-pill {
-      display:inline-block;
-      padding:6px 10px;
-      border-radius:999px;
-      font-weight:600;
-      font-size:13px;
-    }
-    .status-connected { background:#e6ffef; color:#0a8a55; }
-    .status-waiting { background:#fff7e6; color:#7a4b00; }
-    .status-offline { background:#ffeef0; color:#9b2c2c; }
-
-    /* logs */
-    .logs { height:320px; overflow:auto; background:#071226; color:#dff3e8; padding:10px; border-radius:8px; font-family:monospace; font-size:13px; }
-
-    /* responsive */
-    @media (max-width: 991px){
-      .app { flex-direction:column; padding:12px; }
-      .sidebar { width:100%; order:2; }
-      .content { order:1; }
-    }
-
-    /* helpers */
-    .muted { color:var(--muted); }
-    .mb8 { margin-bottom:8px; }
+    :root{--accent:#0d6efd;--muted:#6c757d}
+    body{font-family:'Poppins',system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f6fbff}
+    .app{display:flex;min-height:100vh;gap:18px;padding:18px}
+    .sidebar{width:260px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 8px 30px rgba(13,110,253,0.06)}
+    .content{flex:1}
+    .navlink{display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;color:#123;text-decoration:none;margin-bottom:6px}
+    .navlink.active{background:rgba(13,110,253,0.08);color:var(--accent);font-weight:600}
+    .card{border-radius:12px;background:#fff;padding:14px;box-shadow:0 8px 18px rgba(20,30,80,0.04)}
+    .qr-img{max-width:220px;border-radius:10px;display:block;margin:12px auto}
+    .logs{height:320px;overflow:auto;background:#071226;color:#dff3e8;padding:10px;border-radius:8px;font-family:monospace;font-size:13px}
+    @media(max-width:991px){.app{flex-direction:column}.sidebar{width:100%}}
+    .small-muted{color:var(--muted);font-size:13px}
+    .btn-sm-round{border-radius:8px}
   </style>
 </head>
 <body>
-  <div class="container-fluid py-4">
-    <div class="app">
-
-      <!-- SIDEBAR -->
-      <aside class="sidebar">
-        <div class="brand">
-          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <rect width="24" height="24" rx="6" fill="#0d6efd" />
-            <path d="M7 8h10M7 12h6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          <div>
-            <h2>WA REST API</h2>
-            <div class="muted" style="font-size:12px">Dashboard & Control</div>
-          </div>
+  <div class="app container-fluid">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="d-flex align-items-center mb-3">
+        <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(45deg,#0d6efd,#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">WA</div>
+        <div class="ms-3">
+          <div style="font-weight:700">WA REST</div>
+          <div class="small-muted">Socket.IO frontend</div>
         </div>
+      </div>
 
-        <nav class="mt-3">
-          <a class="navlink active" data-page="dashboard"><span>🏠</span> Dashboard</a>
-          <a class="navlink" data-page="send"><span>✉️</span> Send Message</a>
-          <a class="navlink" data-page="media"><span>📁</span> Send Media</a>
-          <a class="navlink" data-page="contacts"><span>👥</span> Contacts & Chats</a>
-          <a class="navlink" data-page="groups"><span>👪</span> Groups</a>
-          <a class="navlink" data-page="logs"><span>📝</span> Logs</a>
-        </nav>
+      <nav>
+        <a class="navlink active" data-page="dashboard">🏠 Dashboard</a>
+        <a class="navlink" data-page="send">✉️ Send Message</a>
+        <a class="navlink" data-page="media">📁 Send Media</a>
+        <a class="navlink" data-page="contacts">👥 Contacts & Chats</a>
+        <a class="navlink" data-page="groups">👪 Groups</a>
+        <a class="navlink" data-page="logs">📝 Logs</a>
+      </nav>
 
-        <hr>
+      <hr/>
 
-        <div class="mb8">
-          <label class="form-label small">API Server</label>
-          <input id="inputApiUrl" class="form-control form-control-sm mb-2" value="http://151.240.0.221:3000" />
-          <label class="form-label small">API Key</label>
-          <input id="inputApiKey" class="form-control form-control-sm" placeholder="Your API key" />
-        </div>
+      <div class="mb-2 small-muted">Backend</div>
+      <input id="apiUrl" class="form-control form-control-sm mb-2" placeholder="https://your-backend-host:3000" value="http://151.240.0.221:3000"/>
+      <input id="apiKey" class="form-control form-control-sm mb-2" placeholder="API KEY (x-api-key)" />
 
-        <div class="d-grid gap-2 mt-2">
-          <button id="btnConnect" class="btn btn-outline-primary btn-sm">Connect Events</button>
-          <button id="btnDisconnect" class="btn btn-outline-secondary btn-sm" disabled>Disconnect Events</button>
-          <button id="btnLogout" class="btn btn-danger btn-sm">Logout (Clear Auth)</button>
-        </div>
+      <div class="d-grid gap-2">
+        <button id="connectBtn" class="btn btn-primary btn-sm">Connect Socket</button>
+        <button id="disconnectBtn" class="btn btn-outline-secondary btn-sm" disabled>Disconnect</button>
+        <button id="logoutBtn" class="btn btn-danger btn-sm">Logout (clear auth)</button>
+      </div>
 
-        <div class="mt-3 muted" style="font-size:12px">
-          <div>Version: <strong id="clientVersion">—</strong></div>
-          <div class="mt-1">Server: <span id="serverState">—</span></div>
-        </div>
-      </aside>
+      <div class="mt-3 small-muted">
+        <div>Status: <span id="statusPill" style="font-weight:700">Disconnected</span></div>
+        <div class="mt-1">Server state: <span id="serverState">-</span></div>
+      </div>
+    </aside>
 
-      <!-- CONTENT -->
-      <main class="content">
-        <!-- DASHBOARD -->
-        <section id="page-dashboard" class="page">
-          <div class="row g-3">
-            <div class="col-lg-4 col-md-6">
-              <div class="card">
-                <h5>QR Login</h5>
-                <div class="qr-box">
-                  <div id="qrWrap" class="mb-2">
-                    <img id="qrImage" class="qr-img" src="" alt="QR Code" />
-                  </div>
-                  <div id="qrHint" class="muted">Waiting for QR...</div>
-                  <div class="mt-3">
-                    <button id="btnRefreshQr" class="btn btn-outline-primary btn-sm">Refresh QR</button>
-                    <button id="btnClearQr" class="btn btn-outline-secondary btn-sm">Clear</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-lg-8 col-md-6">
-              <div class="card mb-3">
-                <div class="d-flex justify-content-between align-items-center">
-                  <h5 class="mb-0">Connection</h5>
-                  <div id="connPill" class="status-pill status-waiting">Not connected</div>
-                </div>
-                <div class="mt-3">
-                  <small class="muted">Last update:</small>
-                  <pre id="connInfo" class="muted" style="white-space:pre-wrap; background:transparent; border:none; padding:0; font-family:inherit"></pre>
-                </div>
-              </div>
-
-              <div class="card">
-                <h5 class="mb-2">Realtime Logs</h5>
-                <div id="logs" class="logs"></div>
-                <div class="mt-2 d-flex gap-2">
-                  <button id="btnClearLogs" class="btn btn-sm btn-outline-secondary">Clear Logs</button>
-                  <button id="btnDownloadLogs" class="btn btn-sm btn-outline-primary">Download</button>
-                </div>
+    <!-- CONTENT -->
+    <main class="content">
+      <!-- Dashboard -->
+      <section id="page-dashboard">
+        <div class="row g-3">
+          <div class="col-lg-4">
+            <div class="card text-center">
+              <h5>QR Login</h5>
+              <img id="qrImg" class="qr-img" src="" alt="QR"/>
+              <div id="qrHint" class="small-muted">No QR yet</div>
+              <div class="mt-3 d-flex justify-content-center gap-2">
+                <button id="refreshQr" class="btn btn-outline-primary btn-sm btn-sm-round">Refresh QR</button>
+                <button id="clearQr" class="btn btn-outline-secondary btn-sm btn-sm-round">Clear</button>
               </div>
             </div>
           </div>
-        </section>
 
-        <!-- SEND MESSAGE -->
-        <section id="page-send" class="page" style="display:none;">
-          <div class="card">
-            <h5>Send Text Message</h5>
-            <form id="formSend">
-              <div class="row g-2">
-                <div class="col-md-6">
-                  <label class="form-label small">JID</label>
-                  <input id="sendJid" class="form-control" placeholder="628123456789@s.whatsapp.net" required />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small">Delay (ms, optional)</label>
-                  <input id="sendDelay" class="form-control" placeholder="0" type="number" min="0" />
-                </div>
-                <div class="col-12">
-                  <label class="form-label small">Message</label>
-                  <textarea id="sendText" class="form-control" rows="4" required></textarea>
-                </div>
-                <div class="col-12 d-flex gap-2 mt-2">
-                  <button class="btn btn-primary" type="submit">Send</button>
-                  <button id="btnPreview" class="btn btn-outline-secondary" type="button">Preview</button>
+          <div class="col-lg-8">
+            <div class="card">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="mb-0">Realtime Logs</h5>
+                <div>
+                  <button id="clearLogs" class="btn btn-sm btn-outline-secondary btn-sm-round">Clear</button>
+                  <button id="downloadLogs" class="btn btn-sm btn-outline-primary btn-sm-round">Download</button>
                 </div>
               </div>
-            </form>
+              <div id="logs" class="logs"></div>
+            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <!-- SEND MEDIA -->
-        <section id="page-media" class="page" style="display:none;">
-          <div class="card">
-            <h5>Send Media</h5>
-            <form id="formMedia">
-              <div class="row g-2">
-                <div class="col-md-6">
-                  <label class="form-label small">JID</label>
-                  <input id="mediaJid" class="form-control" placeholder="628123...@s.whatsapp.net" required />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small">Caption (optional)</label>
-                  <input id="mediaCaption" class="form-control" />
-                </div>
-                <div class="col-12">
-                  <label class="form-label small">File</label>
-                  <input id="mediaFile" type="file" class="form-control" required />
-                </div>
-                <div class="col-12 d-flex gap-2 mt-2">
-                  <button class="btn btn-info text-white" type="submit">Send Media</button>
-                  <button id="btnPreviewFile" class="btn btn-outline-secondary" type="button">Preview File</button>
-                </div>
-                <div class="col-12" id="filePreviewArea" style="display:none; margin-top:10px;"></div>
-              </div>
-            </form>
-          </div>
-        </section>
-
-        <!-- CONTACTS & CHATS -->
-        <section id="page-contacts" class="page" style="display:none;">
-          <div class="row g-3">
+      <!-- Send Message -->
+      <section id="page-send" style="display:none">
+        <div class="card">
+          <h5>Send Text</h5>
+          <form id="formSend" class="row g-2">
             <div class="col-md-6">
-              <div class="card">
-                <h5>Contacts</h5>
-                <div id="contactsList" style="max-height:420px; overflow:auto;"></div>
-              </div>
+              <label class="form-label small-muted">JID</label>
+              <input id="sendJid" class="form-control" placeholder="628123456789@s.whatsapp.net" required/>
             </div>
             <div class="col-md-6">
-              <div class="card">
-                <h5>Chats</h5>
-                <div id="chatsList" style="max-height:420px; overflow:auto;"></div>
-              </div>
+              <label class="form-label small-muted">Delay (ms)</label>
+              <input id="sendDelay" class="form-control" type="number" min="0" placeholder="0"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label small-muted">Message</label>
+              <textarea id="sendText" class="form-control" rows="4" required></textarea>
+            </div>
+            <div class="col-12 d-flex gap-2">
+              <button class="btn btn-primary" type="submit">Send</button>
+              <button id="previewBtn" type="button" class="btn btn-outline-secondary">Preview</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Send Media -->
+      <section id="page-media" style="display:none">
+        <div class="card">
+          <h5>Send Media</h5>
+          <form id="formMedia" class="row g-2" enctype="multipart/form-data">
+            <div class="col-md-6">
+              <label class="form-label small-muted">JID</label>
+              <input id="mediaJid" class="form-control" placeholder="628...@s.whatsapp.net" required/>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label small-muted">Caption</label>
+              <input id="mediaCaption" class="form-control" placeholder="Caption (optional)"/>
+            </div>
+            <div class="col-12">
+              <label class="form-label small-muted">File</label>
+              <input id="mediaFile" type="file" class="form-control" required/>
+            </div>
+            <div class="col-12 d-flex gap-2">
+              <button class="btn btn-info text-white" type="submit">Send Media</button>
+              <button id="previewFile" type="button" class="btn btn-outline-secondary">Preview</button>
+            </div>
+            <div id="filePreview" style="display:none;margin-top:12px"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Contacts & Chats -->
+      <section id="page-contacts" style="display:none">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="card">
+              <h5>Contacts</h5>
+              <div id="contacts" style="max-height:420px;overflow:auto"></div>
             </div>
           </div>
-        </section>
-
-        <!-- GROUPS -->
-        <section id="page-groups" class="page" style="display:none;">
-          <div class="card">
-            <h5>Group Management</h5>
-            <form id="formCreateGroup" class="mb-3">
-              <div class="row g-2">
-                <div class="col-md-6">
-                  <label class="form-label small">Subject</label>
-                  <input id="groupSubject" class="form-control" required />
-                </div>
-                <div class="col-md-6">
-                  <label class="form-label small">Participants (comma separated JIDs)</label>
-                  <input id="groupParticipants" class="form-control" placeholder="628xxx@s.whatsapp.net, 628yyy@s.whatsapp.net" />
-                </div>
-                <div class="col-12 mt-2">
-                  <button class="btn btn-primary" type="submit">Create Group</button>
-                </div>
-              </div>
-            </form>
-
-            <form id="formAcceptInvite">
-              <div class="row g-2">
-                <div class="col-md-8">
-                  <label class="form-label small">Invite Code / Link</label>
-                  <input id="inviteCode" class="form-control" />
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                  <button class="btn btn-secondary w-100" type="submit">Accept Invite</button>
-                </div>
-              </div>
-            </form>
-
-            <div id="groupsResult" style="margin-top:12px"></div>
-          </div>
-        </section>
-
-        <!-- LOGS PAGE -->
-        <section id="page-logs" class="page" style="display:none;">
-          <div class="card">
-            <h5>Full Event Logs</h5>
-            <div id="fullLogs" class="logs"></div>
-            <div class="mt-2">
-              <button id="btnClearFullLogs" class="btn btn-sm btn-outline-secondary">Clear</button>
-              <button id="btnDownloadFullLogs" class="btn btn-sm btn-outline-primary">Download</button>
+          <div class="col-md-6">
+            <div class="card">
+              <h5>Chats</h5>
+              <div id="chats" style="max-height:420px;overflow:auto"></div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-      </main>
-    </div>
+      <!-- Groups -->
+      <section id="page-groups" style="display:none">
+        <div class="card">
+          <h5>Groups</h5>
+          <form id="createGroup" class="row g-2 mb-2">
+            <div class="col-md-6"><input id="groupSubj" class="form-control" placeholder="Subject" required/></div>
+            <div class="col-md-6"><input id="groupParts" class="form-control" placeholder="Participants comma separated (jid)"/></div>
+            <div class="col-12"><button class="btn btn-primary">Create Group</button></div>
+          </form>
+
+          <form id="acceptInvite" class="row g-2">
+            <div class="col-md-9"><input id="inviteCode" class="form-control" placeholder="Invite code/link"/></div>
+            <div class="col-md-3"><button class="btn btn-outline-secondary w-100">Accept</button></div>
+          </form>
+
+          <div id="groupsResult" class="mt-3 small-muted"></div>
+        </div>
+      </section>
+
+      <!-- Logs page -->
+      <section id="page-logs" style="display:none">
+        <div class="card">
+          <h5>Event Logs</h5>
+          <pre id="fullLogs" style="height:420px;overflow:auto;background:#071226;color:#dff3e8;padding:12px;border-radius:8px;font-family:monospace"></pre>
+        </div>
+      </section>
+    </main>
   </div>
 
   <!-- libs -->
+  <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.7.2/dist/socket.io.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
 
   <script>
-  /**********************
-   * CONFIG + STATE
-   **********************/
-  let API_URL = document.getElementById('inputApiUrl').value.replace(/\/$/, '');
-  let API_KEY = 'x4rc0d3';
-  let es = null; // EventSource
-  let logsBuffer = [];
-  const MAX_LOGS = 1000;
+  // ====== CONFIG & STATE ======
+  let API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
+  let API_KEY = '';
+  let socket = null;
+  let logs = [];
 
   // UI refs
   const navlinks = document.querySelectorAll('.navlink');
-  const pages = document.querySelectorAll('.page');
-  const inputApiKey = document.getElementById('inputApiKey');
-  const btnConnect = document.getElementById('btnConnect');
-  const btnDisconnect = document.getElementById('btnDisconnect');
-  const btnLogout = document.getElementById('btnLogout');
-  const qrImage = document.getElementById('qrImage');
+  const pages = {
+    dashboard: document.getElementById('page-dashboard'),
+    send: document.getElementById('page-send'),
+    media: document.getElementById('page-media'),
+    contacts: document.getElementById('page-contacts'),
+    groups: document.getElementById('page-groups'),
+    logs: document.getElementById('page-logs')
+  };
+  const statusPill = document.getElementById('statusPill');
+  const serverStateEl = document.getElementById('serverState');
+  const qrImg = document.getElementById('qrImg');
   const qrHint = document.getElementById('qrHint');
-  const connPill = document.getElementById('connPill');
-  const connInfo = document.getElementById('connInfo');
   const logsEl = document.getElementById('logs');
   const fullLogsEl = document.getElementById('fullLogs');
-  const btnClearLogs = document.getElementById('btnClearLogs');
-  const btnDownloadLogs = document.getElementById('btnDownloadLogs');
-  const btnClearFullLogs = document.getElementById('btnClearFullLogs');
-  const btnDownloadFullLogs = document.getElementById('btnDownloadFullLogs');
-  const btnRefreshQr = document.getElementById('btnRefreshQr');
-  const btnClearQr = document.getElementById('btnClearQr');
 
-  // pages elements
-  const formSend = document.getElementById('formSend');
-  const sendJid = document.getElementById('sendJid');
-  const sendText = document.getElementById('sendText');
-  const sendDelay = document.getElementById('sendDelay');
+  // init toastr
+  toastr.options = { positionClass: 'toast-bottom-right', timeOut: 2500 };
 
-  const formMedia = document.getElementById('formMedia');
-  const mediaJid = document.getElementById('mediaJid');
-  const mediaFile = document.getElementById('mediaFile');
-  const mediaCaption = document.getElementById('mediaCaption');
-  const filePreviewArea = document.getElementById('filePreviewArea');
+  // ====== NAVIGATION ======
+  navlinks.forEach(a=>a.addEventListener('click', ()=> {
+    navlinks.forEach(n=>n.classList.remove('active'));
+    a.classList.add('active');
+    const page = a.dataset.page;
+    Object.keys(pages).forEach(k => pages[k].style.display = (k === page ? '' : 'none'));
+    if (page === 'contacts') fetchContactsChats();
+    if (page === 'logs') renderFullLogs();
+  }));
 
-  const contactsList = document.getElementById('contactsList');
-  const chatsList = document.getElementById('chatsList');
+  // ====== SOCKET.IO ======
+  function connectSocket() {
+    API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
+    API_KEY = document.getElementById('apiKey').value.trim();
+    if (!API_KEY) { toastr.error('Set API Key'); return; }
+    if (!API_URL) { toastr.error('Set API URL'); return; }
 
-  const formCreateGroup = document.getElementById('formCreateGroup');
-  const formAcceptInvite = document.getElementById('formAcceptInvite');
-  const groupsResult = document.getElementById('groupsResult');
+    disconnectSocket(); // ensure no duplicate
 
-  /**********************
-   * Helpers
-   **********************/
-  function appendLog(msgObj) {
-    const ts = new Date().toISOString();
-    const line = `[${ts}] ${typeof msgObj === 'string' ? msgObj : JSON.stringify(msgObj)}`;
-    logsBuffer.unshift(line);
-    if (logsBuffer.length > MAX_LOGS) logsBuffer.pop();
-    renderLogs();
-  }
+    // create socket with query api_key
+    socket = io(API_URL, { transports: ['websocket','polling'], query: { api_key: API_KEY } });
 
-  function renderLogs() {
-    logsEl.textContent = logsBuffer.slice(0, 200).join('\\n');
-    fullLogsEl.textContent = logsBuffer.join('\\n');
-  }
-
-  function setConnStatus(status, info) {
-    connPill.textContent = status;
-    connInfo.textContent = info ? JSON.stringify(info, null, 2) : '';
-    connPill.className = 'status-pill ' + (status === 'Connected' ? 'status-connected' : status === 'Waiting QR' ? 'status-waiting' : 'status-offline');
-  }
-
-  function notifySuccess(msg) { toastr.success(msg); }
-  function notifyError(msg) { toastr.error(msg); }
-  function notifyInfo(msg) { toastr.info(msg); }
-
-  function getApiHeaders() {
-    return { 'x-api-key': API_KEY, 'Accept': 'application/json' };
-  }
-
-  /**********************
-   * Navigation
-   **********************/
-  navlinks.forEach(a=>{
-    a.addEventListener('click', ()=> {
-      navlinks.forEach(n=>n.classList.remove('active'));
-      a.classList.add('active');
-      const page = a.dataset.page;
-      pages.forEach(p=>p.style.display = (p.id === 'page-' + page ? '' : 'none'));
-      // fetch page data lazily
-      if (page === 'contacts') fetchContactsAndChats();
-      if (page === 'logs') renderLogs();
-    });
-  });
-
-  /**********************
-   * EventSource (SSE) handling
-   **********************/
-  function connectEvents() {
-    API_URL = document.getElementById('inputApiUrl').value.replace(/\/$/, '');
-    API_KEY = inputApiKey.value.trim();
-    if (!API_KEY) { notifyError('Please set API key'); return; }
-    if (!API_URL) { notifyError('Please set API URL'); return; }
-
-    // close existing
-    disconnectEvents();
-
-    const sseUrl = `${API_URL}/events?api_key=${encodeURIComponent(API_KEY)}`;
-    try {
-      es = new EventSource(sseUrl);
-    } catch (e) {
-      notifyError('SSE not available in this environment');
-      return;
-    }
-
-    es.onopen = () => {
-      appendLog('SSE connected');
-      notifySuccess('Realtime connected');
-      document.getElementById('btnConnect').disabled = true;
-      document.getElementById('btnDisconnect').disabled = false;
-    };
-
-    es.onerror = (err) => {
-      appendLog('SSE error: ' + JSON.stringify(err));
-      // don't auto-close - EventSource will retry by default
-    };
-
-    es.addEventListener('qr', e => {
-      let payload;
-      try { payload = JSON.parse(e.data); } catch (err) { payload = { dataUrl: e.data }; }
-      appendLog({ type: 'qr', payload });
-      if (payload?.dataUrl) {
-        qrImage.src = payload.dataUrl;
-        qrHint.textContent = 'Scan with WhatsApp';
-        setConnStatus('Waiting QR', payload);
-      }
+    socket.on('connect', () => {
+      appendLog('Socket connected');
+      statusPill.textContent = 'Connected';
+      toastr.success('Realtime connected');
+      document.getElementById('connectBtn').disabled = true;
+      document.getElementById('disconnectBtn').disabled = false;
     });
 
-    es.addEventListener('connection.update', e => {
-      let payload = JSON.parse(e.data);
-      appendLog({ type: 'connection.update', payload });
-      // update UI based on payload
-      const conn = payload?.connection || payload;
-      if (conn === 'open' || (payload?.connection === 'open')) {
-        setConnStatus('Connected', payload);
-        qrImage.src = '';
+    socket.on('disconnect', (reason) => {
+      appendLog('Socket disconnected: ' + reason);
+      statusPill.textContent = 'Disconnected';
+      toastr.info('Realtime disconnected');
+      document.getElementById('connectBtn').disabled = false;
+      document.getElementById('disconnectBtn').disabled = true;
+    });
+
+    socket.on('qr', (data) => {
+      // server may emit either string dataUrl or object {dataUrl, raw}
+      appendLog({event:'qr', data});
+      if (typeof data === 'string') qrImg.src = data;
+      else if (data?.dataUrl) qrImg.src = data.dataUrl;
+      qrHint.textContent = 'Scan with WhatsApp';
+    });
+
+    socket.on('connection.update', (u) => {
+      appendLog({event:'connection.update', u});
+      serverStateEl.textContent = JSON.stringify(u);
+      if (u?.connection === 'open') {
+        statusPill.textContent = 'Connected';
+        qrImg.src = '';
         qrHint.textContent = 'Connected';
-        notifySuccess('WhatsApp connected');
-      } else if (payload?.qr) {
-        setConnStatus('Waiting QR', payload);
+        toastr.success('WhatsApp connected');
+      } else if (u?.qr) {
+        statusPill.textContent = 'Waiting QR';
+        qrHint.textContent = 'Scan QR';
       } else {
-        setConnStatus('Not connected', payload);
+        statusPill.textContent = 'Disconnected';
       }
     });
 
-    es.addEventListener('messages.upsert', e => {
-      const payload = JSON.parse(e.data);
-      appendLog({ type: 'messages.upsert', payload });
-      // show toast for incoming message
-      notifyInfo('Incoming message (see logs)');
+    socket.on('messages.upsert', (m) => {
+      appendLog({event:'messages.upsert', m});
+      toastr.info('Incoming message');
     });
 
-    es.addEventListener('presence.update', e => {
-      const payload = JSON.parse(e.data);
-      appendLog({ type: 'presence.update', payload });
+    socket.on('presence.update', (p) => appendLog({event:'presence.update', p}));
+
+    socket.on('state', (s) => {
+      appendLog({event:'state', s});
+      serverStateEl.textContent = s ? 'ok' : 'no-state';
     });
 
-    // additional events forwarded by server
-    es.addEventListener('messages.delete', e => {
-      appendLog({ type: 'messages.delete', payload: JSON.parse(e.data) });
+    socket.on('error', (err) => {
+      appendLog('socket error: ' + JSON.stringify(err));
+    });
+
+    socket.on('connect_error', (err) => {
+      appendLog('connect_error: ' + (err?.message || err));
+      toastr.error('Socket connect error');
     });
   }
 
-  function disconnectEvents() {
-    if (es) {
-      es.close();
-      es = null;
-      appendLog('SSE disconnected');
-      notifyInfo('Realtime disconnected');
-      document.getElementById('btnConnect').disabled = false;
-      document.getElementById('btnDisconnect').disabled = true;
+  function disconnectSocket() {
+    if (socket) {
+      socket.close();
+      socket = null;
+      appendLog('Socket closed');
+      document.getElementById('connectBtn').disabled = false;
+      document.getElementById('disconnectBtn').disabled = true;
     }
   }
 
-  btnConnect.addEventListener('click', connectEvents);
-  btnDisconnect.addEventListener('click', disconnectEvents);
+  document.getElementById('connectBtn').addEventListener('click', connectSocket);
+  document.getElementById('disconnectBtn').addEventListener('click', disconnectSocket);
+  document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+    if (!confirm('Logout and clear auth on server?')) return;
+    await apiPost('/auth/logout', {});
+  });
 
-  /**********************
-   * Basic API actions
-   **********************/
-  async function fetchQr() {
-    try {
-      const res = await fetch(`${API_URL}/auth/qr`, { headers: getApiHeaders() });
-      const j = await res.json();
-      if (j.ok && j.qrDataUrl) {
-        qrImage.src = j.qrDataUrl;
-        qrHint.textContent = 'Scan with WhatsApp';
-        appendLog('Fetched QR');
-        setConnStatus('Waiting QR', {});
-      } else {
-        appendLog('No QR available: ' + JSON.stringify(j));
-        if (j.message) qrHint.textContent = j.message;
-      }
-    } catch (err) {
-      appendLog('fetchQr error: ' + err);
-      notifyError('Cannot fetch QR — check server/API key/CORS');
-    }
+  // ====== LOG helpers ======
+  function appendLog(line) {
+    const ts = new Date().toISOString();
+    const row = `[${ts}] ${typeof line === 'string' ? line : JSON.stringify(line)}`;
+    logs.unshift(row);
+    if (logs.length > 1000) logs.pop();
+    logsEl.textContent = logs.slice(0,200).join('\n');
+    fullLogsEl.textContent = logs.join('\n');
   }
 
-  document.getElementById('btnRefreshQr').addEventListener('click', fetchQr);
-  document.getElementById('btnClearQr').addEventListener('click', ()=>{ qrImage.src=''; qrHint.textContent='Cleared'; });
+  function renderFullLogs() { fullLogsEl.textContent = logs.join('\n'); }
 
-  async function sendTextMessage(jid, text) {
+  document.getElementById('clearLogs').addEventListener('click', ()=>{ logs=[]; renderFullLogs(); toastr.info('Logs cleared'); });
+  document.getElementById('downloadLogs').addEventListener('click', ()=> {
+    const blob = new Blob([logs.join('\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'wa-logs.txt'; a.click(); URL.revokeObjectURL(url);
+  });
+
+  // ====== REST helpers ======
+  function getHeaders(json=true) {
+    const h = { 'x-api-key': API_KEY };
+    if (json) h['Content-Type'] = 'application/json';
+    return h;
+  }
+
+  async function apiGet(path) {
     try {
-      const res = await fetch(`${API_URL}/messages/send`, {
-        method: 'POST',
-        headers: Object.assign({'Content-Type':'application/json'}, getApiHeaders()),
-        body: JSON.stringify({ jid, text })
-      });
+      const res = await fetch(API_URL + path, { headers: getHeaders(false) });
+      return await res.json();
+    } catch (e) { appendLog('apiGet error ' + e); throw e; }
+  }
+
+  async function apiPost(path, body, isForm=false) {
+    try {
+      const opts = { method: 'POST', headers: getHeaders(isForm ? false : true) };
+      if (isForm) opts.body = body; else opts.body = JSON.stringify(body);
+      const res = await fetch(API_URL + path, opts);
       const j = await res.json();
-      appendLog({ action:'sendText', jid, result: j });
-      if (j.ok) notifySuccess('Message sent');
-      else notifyError('Send failed: ' + (j.error || JSON.stringify(j)));
+      appendLog({ api: path, result: j });
       return j;
-    } catch (err) {
-      appendLog('sendText error: ' + err);
-      notifyError('Send failed — network/server error');
-      throw err;
-    }
+    } catch (e) { appendLog('apiPost error ' + e); throw e; }
   }
 
-  formSend.addEventListener('submit', async (ev)=>{
+  // ====== QR actions ======
+  document.getElementById('refreshQr').addEventListener('click', async ()=> {
+    try {
+      const j = await apiGet('/auth/qr');
+      if (j.ok && j.qrDataUrl) { qrImg.src = j.qrDataUrl; qrHint.textContent='Scan with WhatsApp'; toastr.success('QR fetched'); }
+      else { toastr.info('No QR'); appendLog(j); }
+    } catch (e) { toastr.error('Failed to fetch QR'); }
+  });
+  document.getElementById('clearQr').addEventListener('click', ()=>{ qrImg.src=''; qrHint.textContent='Cleared'; });
+
+  // ====== Send text ======
+  document.getElementById('formSend').addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    const jid = sendJid.value.trim();
-    const text = sendText.value.trim();
-    const delay = Math.max(0, Number(sendDelay.value) || 0);
-    if (!jid || !text) { notifyError('JID & message required'); return; }
+    const jid = document.getElementById('sendJid').value.trim();
+    const text = document.getElementById('sendText').value.trim();
+    const delay = Number(document.getElementById('sendDelay').value || 0);
+    if (!jid || !text) { toastr.error('jid & text required'); return; }
     if (delay > 0) {
-      notifyInfo('Will send after ' + delay + ' ms');
-      setTimeout(()=> sendTextMessage(jid, text), delay);
+      toastr.info('Will send after ' + delay + ' ms');
+      setTimeout(()=> apiPost('/messages/send', { jid, text }).then(()=>toastr.success('Sent')).catch(()=>toastr.error('Send error')), delay);
     } else {
-      sendTextMessage(jid, text);
+      try {
+        await apiPost('/messages/send', { jid, text });
+        toastr.success('Sent');
+        document.getElementById('sendText').value = '';
+      } catch { toastr.error('Send failed'); }
     }
   });
 
-  // Send media
-  async function sendMediaFormData(jid, file, caption) {
+  // ====== Send media ======
+  document.getElementById('formMedia').addEventListener('submit', async (ev)=>{
+    ev.preventDefault();
+    const jid = document.getElementById('mediaJid').value.trim();
+    const caption = document.getElementById('mediaCaption').value || '';
+    const f = document.getElementById('mediaFile').files[0];
+    if (!jid || !f) { toastr.error('jid & file required'); return; }
     const fd = new FormData();
     fd.append('jid', jid);
-    fd.append('caption', caption || '');
-    fd.append('file', file, file.name);
+    fd.append('caption', caption);
+    fd.append('file', f, f.name);
     try {
-      const res = await fetch(`${API_URL}/messages/sendmedia`, {
-        method: 'POST',
-        headers: { 'x-api-key': API_KEY }, // do not set Content-Type — browser sets multipart boundary
-        body: fd
-      });
-      const j = await res.json();
-      appendLog({ action:'sendMedia', file: file.name, result:j });
-      if (j.ok) notifySuccess('Media sent');
-      else notifyError('Send media failed: ' + (j.error || JSON.stringify(j)));
-      return j;
-    } catch (err) {
-      appendLog('sendMedia error: ' + err);
-      notifyError('Send media failed — network/server error');
-      throw err;
-    }
-  }
-
-  formMedia.addEventListener('submit', async (ev) => {
-    ev.preventDefault();
-    const jid = mediaJid.value.trim();
-    const file = mediaFile.files[0];
-    const caption = mediaCaption.value.trim();
-    if (!jid || !file) { notifyError('JID & file required'); return; }
-    await sendMediaFormData(jid, file, caption);
+      const j = await apiPost('/messages/sendmedia', fd, true);
+      if (j.ok) toastr.success('Media sent'); else toastr.error('Send media failed');
+    } catch { toastr.error('Send media error'); }
   });
 
-  // file preview
-  document.getElementById('btnPreviewFile').addEventListener('click', async ()=>{
-    const f = mediaFile.files[0];
-    if (!f) { notifyError('Choose a file first'); return; }
+  document.getElementById('previewFile').addEventListener('click', ()=> {
+    const f = document.getElementById('mediaFile').files[0];
+    if (!f) { toastr.info('Choose file'); return; }
     const url = URL.createObjectURL(f);
-    filePreviewArea.style.display = '';
-    if (f.type.startsWith('image/')) {
-      filePreviewArea.innerHTML = '<img src="'+url+'" style="max-width:100%; border-radius:8px;" />';
-    } else {
-      filePreviewArea.innerHTML = '<div class="muted">File: '+f.name+' ('+Math.round(f.size/1024)+' KB)</div>';
-    }
-    notifyInfo('Preview ready (local)');
+    const preview = document.getElementById('filePreview');
+    preview.style.display = '';
+    if (f.type.startsWith('image/')) preview.innerHTML = `<img src="${url}" style="max-width:100%;border-radius:8px">`;
+    else preview.innerHTML = `<div class="small-muted">File: ${f.name} (${Math.round(f.size/1024)} KB)</div>`;
   });
 
-  /**********************
-   * Contacts & Chats
-   **********************/
-  async function fetchContactsAndChats() {
+  // ====== Contacts & Chats ======
+  async function fetchContactsChats(){
     try {
-      const resC = await fetch(`${API_URL}/contacts`, { headers: getApiHeaders() });
-      const cjson = await resC.json();
-      if (cjson.ok) {
-        renderContacts(cjson.contacts || []);
-      } else {
-        contactsList.innerHTML = '<div class="muted">No contacts: '+JSON.stringify(cjson)+'</div>';
-      }
-    } catch (err) {
-      contactsList.innerHTML = '<div class="muted">Failed to fetch contacts</div>';
-    }
-
-    try {
-      const res = await fetch(`${API_URL}/chats`, { headers: getApiHeaders() });
-      const j = await res.json();
-      if (j.ok) renderChats(j.chats || []);
-      else chatsList.innerHTML = '<div class="muted">No chats: '+JSON.stringify(j)+'</div>';
-    } catch (err) {
-      chatsList.innerHTML = '<div class="muted">Failed to fetch chats</div>';
-    }
+      const c = await apiGet('/contacts');
+      if (c.ok) renderContacts(c.contacts);
+      const ch = await apiGet('/chats');
+      if (ch.ok) renderChats(ch.chats);
+    } catch (e) { toastr.error('Failed to fetch contacts/chats'); }
   }
 
-  function renderContacts(contacts) {
-    if (!contacts || contacts.length === 0) { contactsList.innerHTML = '<div class="muted">No contacts</div>'; return; }
-    contactsList.innerHTML = contacts.map(c=>{
-      const name = c.notify || c.name || c.vname || '';
-      const id = c.id || c.jid || (c.key && c.key.remoteJid) || '';
-      return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${name}</strong><div class="muted small">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="fillJid('${id}')">Use</button></div></div>`;
+  function renderContacts(list){
+    const el = document.getElementById('contacts');
+    if (!list || list.length === 0) { el.innerHTML = '<div class="small-muted">No contacts</div>'; return; }
+    el.innerHTML = list.map(ct => {
+      const name = ct.name || ct.notify || ct.vname || 'Unknown';
+      const id = (ct.id && (ct.id.id || ct.id)) || ct.jid || ct?.key?.remoteJid || JSON.stringify(ct);
+      return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${name}</strong><div class="small-muted">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="useJid('${id}')">Use</button></div></div>`;
     }).join('');
   }
 
-  function renderChats(chats) {
-    if (!chats || chats.length === 0) { chatsList.innerHTML = '<div class="muted">No chats</div>'; return; }
-    chatsList.innerHTML = chats.map(c=>{
+  function renderChats(list){
+    const el = document.getElementById('chats');
+    if (!list || list.length === 0) { el.innerHTML = '<div class="small-muted">No chats</div>'; return; }
+    el.innerHTML = list.map(c => {
       const id = (c.id && (c.id.id || c.id)) || c.conversation || JSON.stringify(c);
-      const subject = c.name || c.topic || c.contact?.name || '';
-      return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${subject||id}</strong><div class="muted small">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="fillJid('${id}')">Use</button></div></div>`;
+      const title = c.name || c.topic || c.contact?.name || id;
+      return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${title}</strong><div class="small-muted">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="useJid('${id}')">Use</button></div></div>`;
     }).join('');
   }
 
-  // make fillJid accessible to buttons
-  window.fillJid = function(jid) {
-    sendJid.value = jid;
-    mediaJid.value = jid;
-    notifyInfo('JID filled: ' + jid);
-  };
+  window.useJid = function(jid){ document.getElementById('sendJid').value = jid; document.getElementById('mediaJid').value = jid; toastr.info('JID filled'); };
 
-  /**********************
-   * Groups
-   **********************/
-  formCreateGroup.addEventListener('submit', async (ev)=> {
+  // ====== Groups ======
+  document.getElementById('createGroup').addEventListener('submit', async (ev)=>{
     ev.preventDefault();
-    const subject = document.getElementById('groupSubject').value.trim();
-    const partsRaw = document.getElementById('groupParticipants').value.trim();
-    const participants = partsRaw ? partsRaw.split(',').map(s=>s.trim()) : [];
-    if (!subject || participants.length === 0) { notifyError('Subject & participants required'); return; }
+    const subject = document.getElementById('groupSubj').value.trim();
+    const parts = document.getElementById('groupParts').value.split(',').map(s=>s.trim()).filter(Boolean);
+    if (!subject || parts.length===0){ toastr.error('subject & participants required'); return; }
     try {
-      const res = await fetch(`${API_URL}/groups/create`, {
-        method:'POST',
-        headers: Object.assign({'Content-Type':'application/json'}, getApiHeaders()),
-        body: JSON.stringify({ subject, participants })
-      });
-      const j = await res.json();
-      groupsResult.innerText = JSON.stringify(j, null, 2);
-      if (j.ok) notifySuccess('Group created');
-      else notifyError('Create group failed');
-    } catch (err) {
-      groupsResult.innerText = String(err);
-      notifyError('Create group error');
-    }
+      const j = await apiPost('/groups/create', { subject, participants: parts });
+      document.getElementById('groupsResult').textContent = JSON.stringify(j, null, 2);
+      if (j.ok) toastr.success('Group created'); else toastr.error('Create failed');
+    } catch { toastr.error('Create group error'); }
   });
 
-  formAcceptInvite.addEventListener('submit', async (ev)=> {
+  document.getElementById('acceptInvite').addEventListener('submit', async (ev)=>{
     ev.preventDefault();
-    const inviteCode = document.getElementById('inviteCode').value.trim();
-    if (!inviteCode) { notifyError('Invite code required'); return; }
+    const code = document.getElementById('inviteCode').value.trim();
+    if (!code){ toastr.error('Invite required'); return; }
     try {
-      const res = await fetch(`${API_URL}/groups/accept`, {
-        method:'POST',
-        headers: Object.assign({'Content-Type':'application/json'}, getApiHeaders()),
-        body: JSON.stringify({ inviteCode })
-      });
-      const j = await res.json();
-      groupsResult.innerText = JSON.stringify(j, null, 2);
-      if (j.ok) notifySuccess('Accepted invite');
-      else notifyError('Accept failed');
-    } catch (err) {
-      groupsResult.innerText = String(err);
-      notifyError('Accept error');
-    }
+      const j = await apiPost('/groups/accept', { inviteCode: code });
+      document.getElementById('groupsResult').textContent = JSON.stringify(j, null, 2);
+      if (j.ok) toastr.success('Accepted'); else toastr.error('Accept failed');
+    } catch { toastr.error('Accept error'); }
   });
 
-  /**********************
-   * Logout / state / misc
-   **********************/
-  btnLogout.addEventListener('click', async ()=>{
-    if (!confirm('Logout and clear auth on server?')) return;
-    try {
-      const res = await fetch(`${API_URL}/auth/logout`, { method:'POST', headers: getApiHeaders() });
-      const j = await res.json();
-      appendLog({ action:'logout', result:j });
-      if (j.ok) notifySuccess('Logged out');
-      else notifyError('Logout failed');
-    } catch (err) {
-      appendLog('logout error: ' + err);
-      notifyError('Logout network error');
-    }
-  });
+  // ====== Logs page render ======
+  function renderFullLogs(){ document.getElementById('fullLogs').textContent = logs.join('\n'); }
 
-  // server / state polling (light)
-  async function fetchState() {
-    try {
-      const res = await fetch(`${API_URL}/state`, { headers: getApiHeaders() });
-      const j = await res.json();
-      if (j.ok) {
-        document.getElementById('serverState').innerText = j.state ? 'ok' : 'unknown';
-      }
-    } catch (e) {
-      // ignore
-    }
-  }
-
-  // logs controls
-  btnClearLogs.addEventListener('click', ()=>{ logsBuffer = []; renderLogs(); notifyInfo('Logs cleared'); });
-  btnDownloadLogs.addEventListener('click', ()=> {
-    const blob = new Blob([logsBuffer.join('\\n')], { type:'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'wa-logs.txt'; a.click(); URL.revokeObjectURL(url);
-  });
-
-  btnClearFullLogs.addEventListener('click', ()=>{ logsBuffer = []; renderLogs(); notifyInfo('Full logs cleared'); });
-  btnDownloadFullLogs.addEventListener('click', ()=> {
-    const blob = new Blob([logsBuffer.join('\\n')], { type:'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'wa-full-logs.txt'; a.click(); URL.revokeObjectURL(url);
-  });
-
-  // initial UI state
+  // ====== Start UI initial ======
   (function init(){
-    toastr.options = { positionClass: 'toast-bottom-right', timeOut: 3000 };
-    document.getElementById('clientVersion').innerText = '1.0';
-    setConnStatus('Not connected', null);
-    renderLogs();
-    // auto-fill API_KEY from localStorage if present
-    const storedKey = localStorage.getItem('wa_api_key');
-    if (storedKey) { inputApiKey.value = storedKey; API_KEY = storedKey; }
-    inputApiKey.addEventListener('change', ()=>{ API_KEY = inputApiKey.value.trim(); localStorage.setItem('wa_api_key', API_KEY); });
-    // auto-refresh state periodically
-    setInterval(fetchState, 15_000);
+    // try to pull API_KEY from localStorage
+    const saved = localStorage.getItem('wa_api_key');
+    if (saved) { document.getElementById('apiKey').value = saved; }
+    document.getElementById('apiKey').addEventListener('change', (e)=> localStorage.setItem('wa_api_key', e.target.value));
+    appendLog('Frontend ready');
   })();
 
-  // expose for debug
-  window._APP = { appendLog, logsBuffer };
   </script>
 </body>
 </html>
