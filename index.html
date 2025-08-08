@@ -101,7 +101,7 @@
   <script>
     // CONFIG
     let API_KEY = document.getElementById('apiKeyInput').value.trim(); // user can edit on UI
-    const BASE = 'http://151.240.0.221'; // jika backend di origin sama, biarkan ''; atau masukkan full URL mis. 'https://example.com'
+    const BASE = 'http://151.240.0.221:3000'; // jika backend di origin sama, biarkan ''; atau masukkan full URL mis. 'https://example.com'
     const QR_POLL_INTERVAL = 3000; // ms (fallback)
     const USE_POLL_FOR_QR = false; // kita rely SSE 'qr' event mostly; kalau ingin polling ubah true
 
