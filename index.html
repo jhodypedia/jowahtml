@@ -1,479 +1,53 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="id">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>WA Dashboard — Socket.IO</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login | WA Panel</title>
 
-  <!-- Bootstrap -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
   <!-- Toastr -->
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"/>
 
-  <style>
-    :root{--accent:#0d6efd;--muted:#6c757d}
-    body{font-family:Inter,UI-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial;background:#f6fbff;color:#111}
-    .app{display:flex;gap:16px;padding:18px;min-height:100vh}
-    .sidebar{width:300px;background:#fff;border-radius:12px;padding:16px;box-shadow:0 8px 30px rgba(13,110,253,0.06)}
-    .content{flex:1}
-    .navlink{display:block;padding:10px;border-radius:8px;color:#123;text-decoration:none;margin-bottom:6px}
-    .navlink.active{background:rgba(13,110,253,0.08);color:var(--accent);font-weight:600}
-    .card{border-radius:12px;background:#fff;padding:14px;box-shadow:0 8px 18px rgba(20,30,80,0.04)}
-    .qr-img{max-width:260px;border-radius:12px;display:block;margin:12px auto;background:#fff;padding:8px}
-    .logs{height:360px;overflow:auto;background:#071226;color:#dff3e8;padding:12px;border-radius:8px;font-family:monospace;font-size:13px}
-    @media(max-width:991px){.app{flex-direction:column}.sidebar{width:100%}}
-    .small-muted{color:var(--muted);font-size:13px}
-    .btn-sm-round{border-radius:8px}
-  </style>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
-  <div class="container-fluid">
-    <div class="app">
-      <!-- Sidebar -->
-      <aside class="sidebar">
-        <div class="d-flex align-items-center mb-3">
-          <div style="width:44px;height:44px;border-radius:10px;background:linear-gradient(45deg,#0d6efd,#0ea5e9);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700">WA</div>
-          <div class="ms-3">
-            <div style="font-weight:700">WA Dashboard</div>
-            <div class="small-muted">Socket.IO client</div>
-          </div>
+<body class="bg-light d-flex align-items-center vh-100">
+
+<div class="container">
+  <div class="row justify-content-center">
+    <div class="col-12 col-md-4">
+      <div class="card shadow animate__animated animate__fadeInDown">
+        <div class="card-body">
+          <h4 class="text-center mb-4"><i class="bi bi-whatsapp"></i> WA Panel</h4>
+          <form id="loginForm">
+            <div class="mb-3">
+              <label class="form-label">Username</label>
+              <input type="text" class="form-control" id="username" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Password</label>
+              <input type="password" class="form-control" id="password" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100"><i class="bi bi-box-arrow-in-right"></i> Masuk</button>
+          </form>
         </div>
-
-        <nav class="mb-3">
-          <a class="navlink active" data-page="dashboard">🏠 Dashboard</a>
-          <a class="navlink" data-page="send">✉️ Send Message</a>
-          <a class="navlink" data-page="media">📁 Send Media</a>
-          <a class="navlink" data-page="contacts">👥 Contacts & Chats</a>
-          <a class="navlink" data-page="groups">👪 Groups</a>
-          <a class="navlink" data-page="logs">📝 Logs</a>
-        </nav>
-
-        <hr/>
-
-        <label class="form-label small-muted">Backend URL</label>
-        <input id="apiUrl" class="form-control form-control-sm mb-2" placeholder="https://backend-host:3000" value="http://151.240.0.221:3000"/>
-        <label class="form-label small-muted">API Key</label>
-        <input id="apiKey" class="form-control form-control-sm mb-2" placeholder="x-api-key"/>
-
-        <div class="d-grid gap-2">
-          <button id="connectBtn" class="btn btn-primary btn-sm">Connect Realtime</button>
-          <button id="disconnectBtn" class="btn btn-outline-secondary btn-sm" disabled>Disconnect</button>
-          <button id="logoutBtn" class="btn btn-danger btn-sm">Logout (clear auth)</button>
-        </div>
-
-        <div class="mt-3 small-muted">
-          <div>Status: <strong id="statusPill">Disconnected</strong></div>
-          <div class="mt-1">Server: <span id="serverState">—</span></div>
-        </div>
-      </aside>
-
-      <!-- Content -->
-      <main class="content">
-        <!-- Dashboard -->
-        <section id="page-dashboard">
-          <div class="row g-3">
-            <div class="col-lg-4">
-              <div class="card text-center">
-                <h5>QR Login</h5>
-                <img id="qrImg" class="qr-img" src="" alt="QR"/>
-                <div id="qrHint" class="small-muted">No QR yet</div>
-                <div class="mt-3 d-flex justify-content-center gap-2">
-                  <button id="refreshQr" class="btn btn-outline-primary btn-sm btn-sm-round">Fetch QR</button>
-                  <button id="clearQr" class="btn btn-outline-secondary btn-sm btn-sm-round">Clear</button>
-                </div>
-              </div>
-            </div>
-
-            <div class="col-lg-8">
-              <div class="card mb-3">
-                <div class="d-flex justify-content-between align-items-center mb-2">
-                  <h5 class="mb-0">Realtime Logs</h5>
-                  <div>
-                    <button id="clearLogs" class="btn btn-sm btn-outline-secondary">Clear</button>
-                    <button id="downloadLogs" class="btn btn-sm btn-outline-primary">Download</button>
-                  </div>
-                </div>
-                <div id="logs" class="logs"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Send -->
-        <section id="page-send" style="display:none">
-          <div class="card">
-            <h5>Send Text</h5>
-            <form id="formSend" class="row g-2">
-              <div class="col-md-6">
-                <label class="form-label small-muted">JID</label>
-                <input id="sendJid" class="form-control" placeholder="628123456789@s.whatsapp.net" required/>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small-muted">Delay (ms)</label>
-                <input id="sendDelay" class="form-control" type="number" min="0" placeholder="0"/>
-              </div>
-              <div class="col-12">
-                <label class="form-label small-muted">Message</label>
-                <textarea id="sendText" class="form-control" rows="4" required></textarea>
-              </div>
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-primary">Send</button>
-                <button id="previewBtn" type="button" class="btn btn-outline-secondary">Preview</button>
-              </div>
-            </form>
-          </div>
-        </section>
-
-        <!-- Media -->
-        <section id="page-media" style="display:none">
-          <div class="card">
-            <h5>Send Media</h5>
-            <form id="formMedia" class="row g-2" enctype="multipart/form-data">
-              <div class="col-md-6">
-                <label class="form-label small-muted">JID</label>
-                <input id="mediaJid" class="form-control" placeholder="628...@s.whatsapp.net" required/>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label small-muted">Caption</label>
-                <input id="mediaCaption" class="form-control" placeholder="Caption (optional)"/>
-              </div>
-              <div class="col-12">
-                <label class="form-label small-muted">File</label>
-                <input id="mediaFile" type="file" class="form-control" required/>
-              </div>
-              <div class="col-12 d-flex gap-2">
-                <button class="btn btn-info text-white" type="submit">Send Media</button>
-                <button id="previewFile" type="button" class="btn btn-outline-secondary">Preview</button>
-              </div>
-              <div id="filePreview" style="display:none;margin-top:12px"></div>
-            </form>
-          </div>
-        </section>
-
-        <!-- Contacts -->
-        <section id="page-contacts" style="display:none">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <div class="card">
-                <h5>Contacts</h5>
-                <div id="contacts" style="max-height:420px;overflow:auto"></div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="card">
-                <h5>Chats</h5>
-                <div id="chats" style="max-height:420px;overflow:auto"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Groups -->
-        <section id="page-groups" style="display:none">
-          <div class="card">
-            <h5>Groups</h5>
-            <form id="createGroup" class="row g-2 mb-2">
-              <div class="col-md-6"><input id="groupSubj" class="form-control" placeholder="Subject" required/></div>
-              <div class="col-md-6"><input id="groupParts" class="form-control" placeholder="Participants comma separated (jid)"/></div>
-              <div class="col-12"><button class="btn btn-primary">Create Group</button></div>
-            </form>
-
-            <form id="acceptInvite" class="row g-2">
-              <div class="col-md-9"><input id="inviteCode" class="form-control" placeholder="Invite code/link"/></div>
-              <div class="col-md-3"><button class="btn btn-outline-secondary w-100">Accept</button></div>
-            </form>
-
-            <div id="groupsResult" class="mt-3 small-muted"></div>
-          </div>
-        </section>
-
-        <!-- Logs -->
-        <section id="page-logs" style="display:none">
-          <div class="card">
-            <h5>Event Logs</h5>
-            <pre id="fullLogs" style="height:420px;overflow:auto;background:#071226;color:#dff3e8;padding:12px;border-radius:8px;font-family:monospace"></pre>
-          </div>
-        </section>
-      </main>
+      </div>
     </div>
   </div>
+</div>
 
-  <!-- libs -->
-  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-
-  <script>
-    // ====== state ======
-    let API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
-    let API_KEY = '';
-    let socket = null;
-    let logs = [];
-
-    const navlinks = document.querySelectorAll('.navlink');
-    const pages = {
-      dashboard: document.getElementById('page-dashboard'),
-      send: document.getElementById('page-send'),
-      media: document.getElementById('page-media'),
-      contacts: document.getElementById('page-contacts'),
-      groups: document.getElementById('page-groups'),
-      logs: document.getElementById('page-logs')
-    };
-    const qrImg = document.getElementById('qrImg');
-    const qrHint = document.getElementById('qrHint');
-    const logsEl = document.getElementById('logs');
-    const fullLogsEl = document.getElementById('fullLogs');
-    const serverStateEl = document.getElementById('serverState');
-    const statusPill = document.getElementById('statusPill');
-
-    toastr.options = { positionClass: 'toast-bottom-right', timeOut: 2500 };
-
-    // Navigation
-    navlinks.forEach(a=>a.addEventListener('click', ()=>{
-      navlinks.forEach(n=>n.classList.remove('active'));
-      a.classList.add('active');
-      const page = a.dataset.page;
-      Object.keys(pages).forEach(k => pages[k].style.display = (k === page ? '' : 'none'));
-      if (page === 'contacts') fetchContactsChats();
-      if (page === 'logs') renderFullLogs();
-    }));
-
-    // Helpers
-    function appendLog(line) {
-      const ts = new Date().toISOString();
-      const row = `[${ts}] ${typeof line === 'string' ? line : JSON.stringify(line)}`;
-      logs.unshift(row);
-      if (logs.length > 1500) logs.pop();
-      logsEl.textContent = logs.slice(0,200).join('\\n');
-      fullLogsEl.textContent = logs.join('\\n');
-    }
-    function renderFullLogs(){ fullLogsEl.textContent = logs.join('\\n'); }
-    function getHeaders(json=true) {
-      const h = {};
-      if (API_KEY) h['x-api-key'] = API_KEY;
-      if (json) h['Content-Type'] = 'application/json';
-      return h;
-    }
-    async function apiGet(path) {
-      API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
-      try {
-        const res = await fetch(API_URL + path, { headers: getHeaders(false) });
-        return await res.json();
-      } catch (e) { appendLog('apiGet error ' + e); throw e; }
-    }
-    async function apiPost(path, body, isForm=false) {
-      API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
-      try {
-        const opts = { method: 'POST', headers: getHeaders(isForm ? false : true) };
-        opts.body = isForm ? body : JSON.stringify(body);
-        const res = await fetch(API_URL + path, opts);
-        const j = await res.json();
-        appendLog({ api: path, result: j });
-        return j;
-      } catch (e) { appendLog('apiPost error ' + e); throw e; }
-    }
-
-    // Socket functions
-    function connectSocket() {
-      API_URL = document.getElementById('apiUrl').value.replace(/\/$/, '');
-      API_KEY = document.getElementById('apiKey').value.trim();
-      if (!API_KEY) { toastr.error('Set API Key'); return; }
-      if (!API_URL) { toastr.error('Set API URL'); return; }
-
-      disconnectSocket();
-
-      appendLog('Connecting to socket...');
-      socket = io(API_URL, { transports: ['websocket','polling'], query: { api_key: API_KEY, apiKey: API_KEY } });
-
-      socket.on('connect', () => {
-        appendLog('Socket connected: ' + socket.id);
-        toastr.success('Realtime connected');
-        document.getElementById('connectBtn').disabled = true;
-        document.getElementById('disconnectBtn').disabled = false;
-      });
-
-      socket.on('disconnect', (r) => {
-        appendLog('Socket disconnected: ' + r);
-        toastr.info('Realtime disconnected');
-        document.getElementById('connectBtn').disabled = false;
-        document.getElementById('disconnectBtn').disabled = true;
-        statusPill.textContent = 'Disconnected';
-      });
-
-      socket.on('connect_error', (err) => {
-        appendLog('connect_error: ' + (err?.message || err));
-        toastr.error('Socket connect error: ' + (err?.message || ''));
-      });
-
-      socket.on('qr', (data) => {
-        appendLog({event:'qr', data});
-        // backend may emit dataUrl, raw string, or object {dataUrl, raw}
-        if (typeof data === 'string') {
-          if (data.startsWith('data:') || data.startsWith('http')) qrImg.src = data;
-          else qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data)}&size=300x300`;
-        } else if (data?.dataUrl) qrImg.src = data.dataUrl;
-        else if (data?.raw) qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.raw)}&size=300x300`;
-        qrHint.textContent = 'Scan QR';
-        statusPill.textContent = 'Waiting QR';
-      });
-
-      socket.on('connection.update', (u) => {
-        appendLog({event:'connection.update', u});
-        serverStateEl.textContent = u?.connection || JSON.stringify(u);
-        if (u?.connection === 'open') {
-          toastr.success('WhatsApp connected');
-          qrImg.src = '';
-          qrHint.textContent = 'Connected';
-          statusPill.textContent = 'Connected';
-        }
-      });
-
-      socket.on('messages.upsert', (m) => {
-        appendLog({event:'messages.upsert', m});
-        toastr.info('Incoming message');
-      });
-
-      socket.on('presence.update', (p) => appendLog({event:'presence.update', p}));
-      socket.on('log', (l) => appendLog(l));
-    }
-
-    function disconnectSocket() {
-      if (socket) { socket.close(); socket = null; appendLog('Socket closed'); }
-    }
-
-    document.getElementById('connectBtn').addEventListener('click', connectSocket);
-    document.getElementById('disconnectBtn').addEventListener('click', disconnectSocket);
-    document.getElementById('logoutBtn').addEventListener('click', async ()=> {
-      if (!confirm('Logout and clear auth on server?')) return;
-      try {
-        const r = await apiPost('/auth/logout', {});
-        if (r.ok) toastr.success('Logged out');
-        else toastr.error('Logout failed');
-      } catch { toastr.error('Logout error'); }
-    });
-
-    // QR actions
-    document.getElementById('refreshQr').addEventListener('click', async () => {
-      try {
-        const j = await apiGet('/auth/qr');
-        if (j.ok && j.qrDataUrl) { qrImg.src = j.qrDataUrl; qrHint.textContent='Scan with WhatsApp'; toastr.success('QR fetched'); }
-        else { toastr.info('No QR'); appendLog(j); }
-      } catch (e) { toastr.error('Failed to fetch QR'); }
-    });
-    document.getElementById('clearQr').addEventListener('click', ()=>{ qrImg.src=''; qrHint.textContent='Cleared'; });
-
-    // Send text
-    document.getElementById('formSend').addEventListener('submit', async (ev) => {
-      ev.preventDefault();
-      const jid = document.getElementById('sendJid').value.trim();
-      const text = document.getElementById('sendText').value.trim();
-      const delay = Number(document.getElementById('sendDelay').value || 0);
-      if (!jid || !text) { toastr.error('jid & text required'); return; }
-      if (delay > 0) {
-        toastr.info('Will send after ' + delay + ' ms');
-        setTimeout(()=> apiPost('/messages/send', { jid, text }).then(()=>toastr.success('Sent')).catch(()=>toastr.error('Send error')), delay);
-      } else {
-        try {
-          await apiPost('/messages/send', { jid, text });
-          toastr.success('Sent');
-          document.getElementById('sendText').value = '';
-        } catch { toastr.error('Send failed'); }
-      }
-    });
-
-    // Send media
-    document.getElementById('formMedia').addEventListener('submit', async (ev)=> {
-      ev.preventDefault();
-      const jid = document.getElementById('mediaJid').value.trim();
-      const caption = document.getElementById('mediaCaption').value || '';
-      const f = document.getElementById('mediaFile').files[0];
-      if (!jid || !f) { toastr.error('jid & file required'); return; }
-      const fd = new FormData();
-      fd.append('jid', jid);
-      fd.append('caption', caption);
-      fd.append('file', f, f.name);
-      try {
-        const j = await apiPost('/messages/sendmedia', fd, true);
-        if (j.ok) toastr.success('Media sent'); else toastr.error('Send media failed');
-      } catch { toastr.error('Send media error'); }
-    });
-
-    document.getElementById('previewFile').addEventListener('click', ()=> {
-      const f = document.getElementById('mediaFile').files[0];
-      if (!f) { toastr.info('Choose file'); return; }
-      const url = URL.createObjectURL(f);
-      const preview = document.getElementById('filePreview');
-      preview.style.display = '';
-      if (f.type.startsWith('image/')) preview.innerHTML = `<img src="${url}" style="max-width:100%;border-radius:8px">`;
-      else preview.innerHTML = `<div class="small-muted">File: ${f.name} (${Math.round(f.size/1024)} KB)</div>`;
-    });
-
-    // Contacts & Chats
-    async function fetchContactsChats(){
-      try {
-        const c = await apiGet('/contacts');
-        if (c.ok) renderContacts(c.contacts);
-        const ch = await apiGet('/chats');
-        if (ch.ok) renderChats(ch.chats);
-      } catch (e) { toastr.error('Failed to fetch contacts/chats'); }
-    }
-    function renderContacts(list){
-      const el = document.getElementById('contacts');
-      if (!list || list.length === 0) { el.innerHTML = '<div class="small-muted">No contacts</div>'; return; }
-      el.innerHTML = list.map(ct => {
-        const name = ct.name || ct.notify || ct.vname || 'Unknown';
-        const id = ct.id?.id || ct.id || ct.jid || JSON.stringify(ct);
-        return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${name}</strong><div class="small-muted">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="useJid('${id}')">Use</button></div></div>`;
-      }).join('');
-    }
-    function renderChats(list){
-      const el = document.getElementById('chats');
-      if (!list || list.length === 0) { el.innerHTML = '<div class="small-muted">No chats</div>'; return; }
-      el.innerHTML = list.map(c => {
-        const id = c.id?.id || c.id || c.conversation || JSON.stringify(c);
-        const title = c.name || c.topic || c.contact?.name || id;
-        return `<div class="d-flex justify-content-between py-2 border-bottom"><div><strong>${title}</strong><div class="small-muted">${id}</div></div><div><button class="btn btn-sm btn-outline-primary" onclick="useJid('${id}')">Use</button></div></div>`;
-      }).join('');
-    }
-    window.useJid = function(jid){ document.getElementById('sendJid').value = jid; document.getElementById('mediaJid').value = jid; toastr.info('JID filled'); };
-
-    // Groups
-    document.getElementById('createGroup').addEventListener('submit', async (ev)=>{
-      ev.preventDefault();
-      const subject = document.getElementById('groupSubj').value.trim();
-      const parts = document.getElementById('groupParts').value.split(',').map(s=>s.trim()).filter(Boolean);
-      if (!subject || parts.length===0){ toastr.error('subject & participants required'); return; }
-      try {
-        const j = await apiPost('/groups/create', { subject, participants: parts });
-        document.getElementById('groupsResult').textContent = JSON.stringify(j, null, 2);
-        if (j.ok) toastr.success('Group created'); else toastr.error('Create failed');
-      } catch { toastr.error('Create group error'); }
-    });
-
-    document.getElementById('acceptInvite').addEventListener('submit', async (ev)=>{
-      ev.preventDefault();
-      const code = document.getElementById('inviteCode').value.trim();
-      if (!code){ toastr.error('Invite required'); return; }
-      try {
-        const j = await apiPost('/groups/accept', { inviteCode: code });
-        document.getElementById('groupsResult').textContent = JSON.stringify(j, null, 2);
-        if (j.ok) toastr.success('Accepted'); else toastr.error('Accept failed');
-      } catch { toastr.error('Accept error'); }
-    });
-
-    // Logs controls
-    document.getElementById('clearLogs').addEventListener('click', ()=>{ logs=[]; renderFullLogs(); toastr.info('Logs cleared'); });
-    document.getElementById('downloadLogs').addEventListener('click', ()=> {
-      const blob = new Blob([logs.join('\\n')], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'wa-logs.txt'; a.click(); URL.revokeObjectURL(url);
-    });
-
-    (function init(){
-      const saved = localStorage.getItem('wa_api_key');
-      if (saved) document.getElementById('apiKey').value = saved;
-      document.getElementById('apiKey').addEventListener('change', (e)=> localStorage.setItem('wa_api_key', e.target.value));
-      appendLog('Frontend ready');
-    })();
-  </script>
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="assets/js/main.js"></script>
 </body>
 </html>
