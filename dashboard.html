@@ -1,184 +1,194 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Dashboard WA Panel</title>
-
-  <!-- Bootstrap + Icons + Toastr -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
-
-  <style>
-    body { animation: fadeIn 0.8s ease-in-out; }
-    @keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-    input:focus, textarea:focus {
-      box-shadow: 0 0 10px rgba(0, 255, 100, 0.6);
-      border-color: #28a745;
-    }
-    .spinner-border { width: 1rem; height: 1rem; }
-    #logsList li {
-      display: none;
-      animation: fadeInLog 0.5s ease-in-out forwards;
-    }
-    @keyframes fadeInLog { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
-    .message-from { font-weight: bold; }
-    .message-text { white-space: pre-wrap; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard WA</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" rel="stylesheet">
+<style>
+  body { background: #f8f9fa; }
+  .nav-link { cursor: pointer; }
+  .card { box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+  textarea { resize: none; }
+</style>
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-dark bg-success">
-    <div class="container-fluid">
-      <span class="navbar-brand"><i class="bi bi-whatsapp"></i> WA Panel</span>
-      <button id="logoutBtn" class="btn btn-outline-light btn-sm">Logout</button>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+  <div class="container-fluid">
+    <a class="navbar-brand fw-bold" href="#">WA Dashboard</a>
+    <button id="logoutBtn" class="btn btn-outline-light">Logout</button>
+  </div>
+</nav>
+
+<div class="container mt-4">
+  <ul class="nav nav-tabs" id="myTab">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabSend">Kirim Pesan</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-bs-target="#tabMedia">Kirim Media</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-bs-target="#tabBroadcast">Broadcast</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" data-bs-target="#tabLogs">Logs</a></li>
+  </ul>
+
+  <div class="tab-content border p-3 bg-white rounded-bottom">
+    <!-- Kirim Pesan -->
+    <div class="tab-pane fade show active" id="tabSend">
+      <form id="sendMessageForm">
+        <div class="mb-3">
+          <label>Nomor Tujuan</label>
+          <input type="text" id="to" class="form-control" placeholder="Contoh: 08xxxxxx">
+        </div>
+        <div class="mb-3">
+          <label>Pesan</label>
+          <textarea id="message" class="form-control" rows="3"></textarea>
+        </div>
+        <button class="btn btn-primary">Kirim</button>
+      </form>
     </div>
-  </nav>
 
-  <div class="container py-4">
-
-    <!-- Form Kirim Pesan -->
-    <div class="card mb-4">
-      <div class="card-header bg-success text-white">Kirim Pesan</div>
-      <div class="card-body">
+    <!-- Kirim Media -->
+    <div class="tab-pane fade" id="tabMedia">
+      <form id="sendMediaForm" enctype="multipart/form-data">
         <div class="mb-3">
-          <label class="form-label">Nomor Tujuan</label>
-          <input type="text" class="form-control" id="to" placeholder="08xxxxxxxxx" required>
+          <label>Nomor Tujuan</label>
+          <input type="text" id="mediaTo" class="form-control" placeholder="Contoh: 08xxxxxx">
         </div>
         <div class="mb-3">
-          <label class="form-label">Pesan</label>
-          <textarea class="form-control" id="message" rows="3" placeholder="Tulis pesan teks..."></textarea>
+          <label>File</label>
+          <input type="file" id="mediaFile" class="form-control">
         </div>
-        <button id="sendBtn" class="btn btn-success me-2">
-          <span id="sendText">Kirim Teks</span>
-          <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
-        </button>
-        <label class="btn btn-outline-primary btn-file">
-          Kirim Gambar/File <input type="file" id="fileInput" hidden>
-        </label>
+        <div class="mb-3">
+          <label>Caption</label>
+          <input type="text" id="mediaCaption" class="form-control">
+        </div>
+        <button class="btn btn-success">Kirim Media</button>
+      </form>
+    </div>
+
+    <!-- Broadcast -->
+    <div class="tab-pane fade" id="tabBroadcast">
+      <form id="broadcastForm">
+        <div class="mb-3">
+          <label>Daftar Nomor (pisahkan dengan enter)</label>
+          <textarea id="broadcastNumbers" class="form-control" rows="4" placeholder="08xxxxxx&#10;08yyyyyy"></textarea>
+        </div>
+        <div class="mb-3">
+          <label>Pesan</label>
+          <textarea id="broadcastMessage" class="form-control" rows="3"></textarea>
+        </div>
+        <button class="btn btn-warning">Kirim Broadcast</button>
+      </form>
+      <div class="progress mt-3" style="height: 20px; display:none;">
+        <div id="broadcastProgress" class="progress-bar" style="width: 0%">0%</div>
       </div>
     </div>
 
-    <!-- Logs Pesan -->
-    <div class="card">
-      <div class="card-header bg-secondary text-white">Logs Pesan</div>
-      <ul class="list-group list-group-flush" id="logsList"></ul>
+    <!-- Logs -->
+    <div class="tab-pane fade" id="tabLogs">
+      <button id="refreshLogs" class="btn btn-outline-primary mb-2">Refresh Logs</button>
+      <ul id="messagesList" class="list-group"></ul>
     </div>
   </div>
+</div>
 
-  <!-- Scripts -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
-  <script>
-    const API_BASE = "/api";
-    const token = localStorage.getItem("token");
-    if (!token) window.location = "index.html";
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script>
+const API_BASE = "/api";
+let token = localStorage.getItem("token");
 
-    toastr.options = { closeButton: true, progressBar: true, positionClass: "toast-bottom-right" };
+toastr.options = { closeButton:true, progressBar:true, positionClass:"toast-bottom-right" };
 
-    // Logout
-    $("#logoutBtn").on("click", function() {
-      localStorage.removeItem("token");
-      toastr.info("Logout berhasil");
-      setTimeout(() => window.location = "index.html", 500);
+// Logout
+$("#logoutBtn").click(() => {
+  localStorage.removeItem("token");
+  location.href = "index.html";
+});
+
+// Kirim Pesan
+$("#sendMessageForm").submit(async e => {
+  e.preventDefault();
+  const number = formatNumber($("#to").val());
+  const text = $("#message").val();
+  try {
+    const res = await fetch(`${API_BASE}/messages/send`, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+      body: JSON.stringify({ jid: number+"@s.whatsapp.net", text })
     });
+    const data = await res.json();
+    if (data.ok) toastr.success("Pesan terkirim");
+    else toastr.error(data.message || data.error);
+  } catch { toastr.error("Gagal mengirim pesan"); }
+});
 
-    // Kirim teks
-    $("#sendBtn").on("click", function() {
-      let to = $("#to").val().trim();
-      if (to.startsWith("08")) to = "62" + to.substring(1);
-      const text = $("#message").val().trim();
-      if (!to || !text) return toastr.warning("Nomor dan pesan wajib diisi");
+// Kirim Media
+$("#sendMediaForm").submit(async e => {
+  e.preventDefault();
+  const number = formatNumber($("#mediaTo").val());
+  const file = $("#mediaFile")[0].files[0];
+  if (!file) return toastr.error("Pilih file terlebih dahulu");
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("jid", number+"@s.whatsapp.net");
+  formData.append("caption", $("#mediaCaption").val());
+  try {
+    const res = await fetch(`${API_BASE}/messages/sendmedia`, {
+      method:"POST",
+      headers:{ "Authorization":`Bearer ${token}` },
+      body: formData
+    });
+    const data = await res.json();
+    if (data.ok) toastr.success("Media terkirim");
+    else toastr.error(data.message || data.error);
+  } catch { toastr.error("Gagal mengirim media"); }
+});
 
-      $("#sendText").text("Mengirim...");
-      $("#sendSpinner").removeClass("d-none");
-
-      $.ajax({
-        url: API_BASE + "/messages/send",
-        method: "POST",
-        headers: { "Authorization": "Bearer " + token, "Content-Type": "application/json" },
-        data: JSON.stringify({ jid: to + "@s.whatsapp.net", text }),
-        success: function(res) {
-          if (res.ok) {
-            toastr.success("Pesan terkirim");
-            $("#message").val("");
-            loadLogs();
-          } else {
-            toastr.error(res.message || "Gagal mengirim pesan");
-          }
-        },
-        error: function(err) {
-          toastr.error("Error: " + (err.responseJSON?.message || "Server error"));
-        },
-        complete: function() {
-          $("#sendText").text("Kirim Teks");
-          $("#sendSpinner").addClass("d-none");
-        }
+// Broadcast
+$("#broadcastForm").submit(async e => {
+  e.preventDefault();
+  const numbers = $("#broadcastNumbers").val().split(/\n|,/).map(n => formatNumber(n.trim())).filter(n => n);
+  const text = $("#broadcastMessage").val();
+  if (!numbers.length) return toastr.error("Nomor kosong");
+  $(".progress").show();
+  let sent = 0;
+  for (let n of numbers) {
+    try {
+      const res = await fetch(`${API_BASE}/messages/send`, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":`Bearer ${token}` },
+        body: JSON.stringify({ jid: n+"@s.whatsapp.net", text })
       });
+      const data = await res.json();
+      if (data.ok) sent++;
+    } catch {}
+    let percent = Math.round((sent / numbers.length) * 100);
+    $("#broadcastProgress").css("width", percent+"%").text(percent+"%");
+  }
+  toastr.success("Broadcast selesai");
+});
+
+// Logs
+$("#refreshLogs").click(async () => {
+  try {
+    const res = await fetch(`${API_BASE}/messages`, {
+      headers:{ "Authorization":`Bearer ${token}` }
     });
-
-    // Kirim file/gambar
-    $("#fileInput").on("change", function() {
-      let to = $("#to").val().trim();
-      if (to.startsWith("08")) to = "62" + to.substring(1);
-      const file = this.files[0];
-      if (!to || !file) return toastr.warning("Nomor dan file wajib diisi");
-
-      const formData = new FormData();
-      formData.append("jid", to + "@s.whatsapp.net");
-      formData.append("file", file);
-      formData.append("caption", $("#message").val().trim());
-
-      toastr.info("Mengirim file...");
-
-      $.ajax({
-        url: API_BASE + "/messages/sendmedia",
-        method: "POST",
-        headers: { "Authorization": "Bearer " + token },
-        data: formData,
-        processData: false,
-        contentType: false,
-        success: function(res) {
-          if (res.ok) {
-            toastr.success("File terkirim");
-            $("#message").val("");
-            $("#fileInput").val("");
-            loadLogs();
-          } else {
-            toastr.error(res.message || "Gagal mengirim file");
-          }
-        },
-        error: function(err) {
-          toastr.error("Error: " + (err.responseJSON?.message || "Server error"));
-        }
-      });
-    });
-
-    // Load logs pesan
-    function loadLogs() {
-      $.ajax({
-        url: API_BASE + "/messages",
-        method: "GET",
-        headers: { "Authorization": "Bearer " + token },
-        success: function(res) {
-          if (res.ok && Array.isArray(res.messages)) {
-            const logsList = $("#logsList");
-            logsList.empty();
-            res.messages.forEach(msg => {
-              const li = $("<li>").addClass("list-group-item")
-                .html(`<span class="message-from">${msg.from}</span>: <span class="message-text">${msg.text || '[Media]'}</span>`);
-              logsList.append(li);
-              li.fadeIn(300);
-            });
-          }
-        }
+    const data = await res.json();
+    if (data.ok) {
+      $("#messagesList").empty();
+      data.messages.forEach(m => {
+        $("#messagesList").append(`<li class="list-group-item"><strong>${m.jid}:</strong> ${m.text || "[Media]"} <span class="text-muted small">(${m.createdAt})</span></li>`);
       });
     }
+  } catch { toastr.error("Gagal memuat logs"); }
+});
 
-    // Polling logs setiap 5 detik
-    setInterval(loadLogs, 5000);
-    loadLogs();
-  </script>
+function formatNumber(num) {
+  return num.replace(/\D/g, "").replace(/^0/, "62");
+}
+</script>
 </body>
 </html>
