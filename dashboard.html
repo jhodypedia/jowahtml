@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard | WA Panel</title>
+
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+
+  <!-- Animate.css -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+
+  <!-- Toastr -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css"/>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+  <div class="container-fluid">
+    <span class="navbar-brand animate__animated animate__fadeInLeft"><i class="bi bi-whatsapp"></i> WA Panel</span>
+    <button class="btn btn-outline-light btn-sm" id="logoutBtn"><i class="bi bi-box-arrow-right"></i> Logout</button>
+  </div>
+</nav>
+
+<div class="container py-3">
+  <div id="waStatus" class="alert alert-info animate__animated animate__fadeIn">Memeriksa status...</div>
+
+  <!-- QR Code -->
+  <div id="qrContainer" class="text-center mb-3" style="display:none;">
+    <h5 class="animate__animated animate__fadeInDown">Scan QR Code</h5>
+    <img id="qrImage" class="img-fluid border p-2 shadow animate__animated animate__pulse animate__infinite" alt="QR WA">
+  </div>
+
+  <!-- Kirim Pesan -->
+  <div class="card mb-3 animate__animated animate__fadeInUp">
+    <div class="card-body">
+      <h5><i class="bi bi-send"></i> Kirim Pesan</h5>
+      <form id="sendMessageForm">
+        <div class="mb-2">
+          <input type="text" class="form-control" id="to" placeholder="Nomor tujuan (628xxx)" required>
+        </div>
+        <div class="mb-2">
+          <textarea class="form-control" id="message" placeholder="Isi pesan..." rows="3" required></textarea>
+        </div>
+        <button class="btn btn-success w-100"><i class="bi bi-send-fill"></i> Kirim</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Pesan Masuk -->
+  <div class="card animate__animated animate__fadeInUp">
+    <div class="card-body">
+      <h5><i class="bi bi-chat-dots"></i> Pesan Masuk</h5>
+      <ul id="messagesList" class="list-group"></ul>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+<script src="assets/js/socket.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
