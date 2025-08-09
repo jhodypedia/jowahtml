@@ -16,23 +16,27 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       const username = document.getElementById("username").value;
       const password = document.getElementById("password").value;
-      const res = await fetch(`${API_BASE}/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        toastr.success("Login berhasil!");
-        localStorage.setItem("token", data.token);
-        setTimeout(() => window.location = "dashboard.html", 800);
-      } else {
-        toastr.error(data.message || "Login gagal");
+      try {
+        const res = await fetch(`${API_BASE}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, password })
+        });
+        const data = await res.json();
+        if (res.ok && data.token) {
+          toastr.success("Login berhasil!");
+          localStorage.setItem("token", data.token);
+          setTimeout(() => window.location = "dashboard.html", 800);
+        } else {
+          toastr.error(data.message || "Login gagal");
+        }
+      } catch (err) {
+        toastr.error("Tidak bisa terhubung ke server");
       }
     });
   }
 
-  // Dashboard
+  // Logout
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
@@ -42,26 +46,31 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Kirim Pesan
   const sendMessageForm = document.getElementById("sendMessageForm");
   if (sendMessageForm) {
     sendMessageForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const to = document.getElementById("to").value;
       const message = document.getElementById("message").value;
-      const res = await fetch(`${API_BASE}/messages/send`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ to, text: message })
-      });
-      const data = await res.json();
-      if (data.ok) {
-        toastr.success("Pesan terkirim!");
-        sendMessageForm.reset();
-      } else {
-        toastr.error("Gagal mengirim pesan");
+      try {
+        const res = await fetch(`${API_BASE}/messages/send`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          },
+          body: JSON.stringify({ to, text: message })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          toastr.success("Pesan terkirim!");
+          sendMessageForm.reset();
+        } else {
+          toastr.error(data.message || "Gagal mengirim pesan");
+        }
+      } catch (err) {
+        toastr.error("Tidak bisa mengirim pesan ke server");
       }
     });
   }
