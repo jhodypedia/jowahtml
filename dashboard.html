@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Dashboard WA Panel</title>
 
+  <!-- Bootstrap + Icons + Toastr -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" rel="stylesheet">
@@ -17,9 +18,17 @@
       border-color: #28a745;
     }
     .spinner-border { width: 1rem; height: 1rem; }
+    #logsList li {
+      display: none;
+      animation: fadeInLog 0.5s ease-in-out forwards;
+    }
+    @keyframes fadeInLog { from {opacity:0; transform:translateY(10px);} to {opacity:1; transform:translateY(0);} }
+    .message-from { font-weight: bold; }
+    .message-text { white-space: pre-wrap; }
   </style>
 </head>
 <body>
+  <!-- Navbar -->
   <nav class="navbar navbar-dark bg-success">
     <div class="container-fluid">
       <span class="navbar-brand"><i class="bi bi-whatsapp"></i> WA Panel</span>
@@ -28,20 +37,37 @@
   </nav>
 
   <div class="container py-4">
-    <div class="mb-3">
-      <label class="form-label">Nomor Tujuan</label>
-      <input type="text" class="form-control" id="to" placeholder="08xxxxxxxxx" required>
+
+    <!-- Form Kirim Pesan -->
+    <div class="card mb-4">
+      <div class="card-header bg-success text-white">Kirim Pesan</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label">Nomor Tujuan</label>
+          <input type="text" class="form-control" id="to" placeholder="08xxxxxxxxx" required>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Pesan</label>
+          <textarea class="form-control" id="message" rows="3" placeholder="Tulis pesan teks..."></textarea>
+        </div>
+        <button id="sendBtn" class="btn btn-success me-2">
+          <span id="sendText">Kirim Teks</span>
+          <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
+        </button>
+        <label class="btn btn-outline-primary btn-file">
+          Kirim Gambar/File <input type="file" id="fileInput" hidden>
+        </label>
+      </div>
     </div>
-    <div class="mb-3">
-      <label class="form-label">Pesan</label>
-      <textarea class="form-control" id="message" rows="3" required></textarea>
+
+    <!-- Logs Pesan -->
+    <div class="card">
+      <div class="card-header bg-secondary text-white">Logs Pesan</div>
+      <ul class="list-group list-group-flush" id="logsList"></ul>
     </div>
-    <button id="sendBtn" class="btn btn-success">
-      <span id="sendText">Kirim</span>
-      <span id="sendSpinner" class="spinner-border spinner-border-sm d-none"></span>
-    </button>
   </div>
 
+  <!-- Scripts -->
   <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
   <script>
@@ -51,12 +77,14 @@
 
     toastr.options = { closeButton: true, progressBar: true, positionClass: "toast-bottom-right" };
 
+    // Logout
     $("#logoutBtn").on("click", function() {
       localStorage.removeItem("token");
       toastr.info("Logout berhasil");
       setTimeout(() => window.location = "index.html", 500);
     });
 
+    // Kirim teks
     $("#sendBtn").on("click", function() {
       let to = $("#to").val().trim();
       if (to.startsWith("08")) to = "62" + to.substring(1);
@@ -75,6 +103,7 @@
           if (res.ok) {
             toastr.success("Pesan terkirim");
             $("#message").val("");
+            loadLogs();
           } else {
             toastr.error(res.message || "Gagal mengirim pesan");
           }
@@ -83,11 +112,73 @@
           toastr.error("Error: " + (err.responseJSON?.message || "Server error"));
         },
         complete: function() {
-          $("#sendText").text("Kirim");
+          $("#sendText").text("Kirim Teks");
           $("#sendSpinner").addClass("d-none");
         }
       });
     });
+
+    // Kirim file/gambar
+    $("#fileInput").on("change", function() {
+      let to = $("#to").val().trim();
+      if (to.startsWith("08")) to = "62" + to.substring(1);
+      const file = this.files[0];
+      if (!to || !file) return toastr.warning("Nomor dan file wajib diisi");
+
+      const formData = new FormData();
+      formData.append("jid", to + "@s.whatsapp.net");
+      formData.append("file", file);
+      formData.append("caption", $("#message").val().trim());
+
+      toastr.info("Mengirim file...");
+
+      $.ajax({
+        url: API_BASE + "/messages/sendmedia",
+        method: "POST",
+        headers: { "Authorization": "Bearer " + token },
+        data: formData,
+        processData: false,
+        contentType: false,
+        success: function(res) {
+          if (res.ok) {
+            toastr.success("File terkirim");
+            $("#message").val("");
+            $("#fileInput").val("");
+            loadLogs();
+          } else {
+            toastr.error(res.message || "Gagal mengirim file");
+          }
+        },
+        error: function(err) {
+          toastr.error("Error: " + (err.responseJSON?.message || "Server error"));
+        }
+      });
+    });
+
+    // Load logs pesan
+    function loadLogs() {
+      $.ajax({
+        url: API_BASE + "/messages",
+        method: "GET",
+        headers: { "Authorization": "Bearer " + token },
+        success: function(res) {
+          if (res.ok && Array.isArray(res.messages)) {
+            const logsList = $("#logsList");
+            logsList.empty();
+            res.messages.forEach(msg => {
+              const li = $("<li>").addClass("list-group-item")
+                .html(`<span class="message-from">${msg.from}</span>: <span class="message-text">${msg.text || '[Media]'}</span>`);
+              logsList.append(li);
+              li.fadeIn(300);
+            });
+          }
+        }
+      });
+    }
+
+    // Polling logs setiap 5 detik
+    setInterval(loadLogs, 5000);
+    loadLogs();
   </script>
 </body>
 </html>
