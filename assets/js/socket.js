@@ -1,9 +1,7 @@
-// Ganti sesuai API backend kamu
+// Gunakan relative path supaya Vercel rewrite bisa jalan
 const API_BASE = "/api";
 let token = localStorage.getItem("token");
-let waConnected = false; // status WA
 
-// Toastr config
 toastr.options = {
   closeButton: true,
   progressBar: true,
@@ -11,64 +9,20 @@ toastr.options = {
   timeOut: 3000
 };
 
-// Socket.IO
-if (token) {
-  const socket = io("http://151.240.0.221:3000", {
-    auth: { token }
-  });
-
-  // Status WA
-  socket.on("wa_state", (state) => {
-    const statusEl = document.getElementById("waStatus");
-    if (statusEl) {
-      if (state === "connected") {
-        waConnected = true;
-        statusEl.className = "alert alert-success animate__animated animate__pulse animate__infinite";
-        statusEl.textContent = "WA Terhubung";
-        document.getElementById("qrContainer").style.display = "none";
-        toastr.success("WhatsApp Connected!");
-      } else {
-        waConnected = false;
-        statusEl.className = "alert alert-warning";
-        statusEl.textContent = "WA Tidak Terhubung";
-        document.getElementById("qrContainer").style.display = "block";
-        toastr.warning("WhatsApp Disconnected!");
-      }
-    }
-  });
-
-  // QR Code
-  socket.on("qr", (qr) => {
-    const qrImg = document.getElementById("qrImage");
-    if (qrImg && qr) {
-      document.getElementById("qrContainer").style.display = "block";
-      qrImg.src = qr;
-      toastr.info("Scan QR Code untuk login WA");
-    }
-  });
-
-  // Pesan masuk
-  socket.on("incoming-message", (msg) => {
-    const list = document.getElementById("messagesList");
-    if (list) {
-      const li = document.createElement("li");
-      li.className = "list-group-item";
-      li.innerHTML = `<strong>${msg.from}:</strong> ${msg.text}`;
-      list.prepend(li);
-      toastr.success(`Pesan baru dari ${msg.from}`);
-    }
-  });
-}
-
-// Event setelah halaman siap
 document.addEventListener("DOMContentLoaded", () => {
-  // LOGIN
+  // ==== LOGIN ====
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const username = document.getElementById("username").value.trim();
       const password = document.getElementById("password").value.trim();
+
+      if (!username || !password) {
+        toastr.error("Username dan password wajib diisi");
+        return;
+      }
+
       try {
         const res = await fetch(`${API_BASE}/auth/login`, {
           method: "POST",
@@ -76,10 +30,11 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
+
         if (res.ok && data.token) {
-          toastr.success("Login berhasil!");
           localStorage.setItem("token", data.token);
-          setTimeout(() => window.location = "dashboard.html", 800);
+          toastr.success("Login berhasil!");
+          setTimeout(() => (window.location.href = "dashboard.html"), 800);
         } else {
           toastr.error(data.message || "Login gagal");
         }
@@ -89,31 +44,26 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // LOGOUT
+  // ==== LOGOUT ====
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("token");
       toastr.info("Anda telah logout");
-      setTimeout(() => window.location = "index.html", 800);
+      setTimeout(() => (window.location.href = "index.html"), 800);
     });
   }
 
-  // KIRIM PESAN
+  // ==== KIRIM PESAN ====
   const sendMessageForm = document.getElementById("sendMessageForm");
   if (sendMessageForm) {
     sendMessageForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!waConnected) {
-        toastr.warning("WA belum terhubung. Scan QR Code terlebih dahulu.");
-        return;
-      }
-
       const to = document.getElementById("to").value.trim();
       const message = document.getElementById("message").value.trim();
 
       if (!to || !message) {
-        toastr.warning("Nomor dan pesan wajib diisi");
+        toastr.error("Nomor dan pesan tidak boleh kosong");
         return;
       }
 
@@ -122,11 +72,13 @@ document.addEventListener("DOMContentLoaded", () => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            "Authorization": `Bearer ${localStorage.getItem("token")}`
           },
           body: JSON.stringify({ to, text: message })
         });
+
         const data = await res.json();
+
         if (res.ok) {
           toastr.success("Pesan terkirim!");
           sendMessageForm.reset();
@@ -138,4 +90,40 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // ==== CEK STATUS WA ====
+  const statusEl = document.getElementById("waStatus");
+  if (statusEl) {
+    checkWAStatus();
+    setInterval(checkWAStatus, 5000);
+  }
 });
+
+async function checkWAStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/wa/status`, {
+      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
+    });
+    const data = await res.json();
+
+    const statusEl = document.getElementById("waStatus");
+    const qrContainer = document.getElementById("qrContainer");
+    const qrImg = document.getElementById("qrImage");
+
+    if (data.state === "connected") {
+      statusEl.className = "alert alert-success animate__animated animate__pulse animate__infinite";
+      statusEl.textContent = "WA Terhubung";
+      if (qrContainer) qrContainer.style.display = "none";
+    } else {
+      statusEl.className = "alert alert-warning";
+      statusEl.textContent = "WA Tidak Terhubung";
+      if (data.qr && qrImg) {
+        qrContainer.style.display = "block";
+        qrImg.src = data.qr;
+        toastr.info("Scan QR Code untuk login WA");
+      }
+    }
+  } catch (err) {
+    toastr.error("Gagal memeriksa status WA");
+  }
+}
