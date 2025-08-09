@@ -1,4 +1,4 @@
-const API_BASE = "http://151.240.0.221:3000/api";
+const API_BASE = "/api";
 let token = localStorage.getItem("token");
 
 toastr.options = {
