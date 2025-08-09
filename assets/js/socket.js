@@ -1,5 +1,4 @@
-// Gunakan relative path supaya Vercel rewrite bisa jalan
-const API_BASE = "/api";
+const API_BASE = "/api"; // sudah lewat vercel.json rewrite
 let token = localStorage.getItem("token");
 
 toastr.options = {
@@ -10,19 +9,14 @@ toastr.options = {
 };
 
 document.addEventListener("DOMContentLoaded", () => {
-  // ==== LOGIN ====
+
+  // Login
   const loginForm = document.getElementById("loginForm");
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-
-      if (!username || !password) {
-        toastr.error("Username dan password wajib diisi");
-        return;
-      }
-
+      const username = document.getElementById("username").value;
+      const password = document.getElementById("password").value;
       try {
         const res = await fetch(`${API_BASE}/auth/login`, {
           method: "POST",
@@ -30,11 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
           body: JSON.stringify({ username, password })
         });
         const data = await res.json();
-
         if (res.ok && data.token) {
-          localStorage.setItem("token", data.token);
           toastr.success("Login berhasil!");
-          setTimeout(() => (window.location.href = "dashboard.html"), 800);
+          localStorage.setItem("token", data.token);
+          setTimeout(() => window.location = "dashboard.html", 800);
         } else {
           toastr.error(data.message || "Login gagal");
         }
@@ -44,86 +37,77 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // ==== LOGOUT ====
+  // Logout
   const logoutBtn = document.getElementById("logoutBtn");
   if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
       localStorage.removeItem("token");
       toastr.info("Anda telah logout");
-      setTimeout(() => (window.location.href = "index.html"), 800);
+      setTimeout(() => window.location = "index.html", 800);
     });
   }
 
-  // ==== KIRIM PESAN ====
+  // Kirim Pesan
   const sendMessageForm = document.getElementById("sendMessageForm");
   if (sendMessageForm) {
     sendMessageForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const to = document.getElementById("to").value.trim();
-      const message = document.getElementById("message").value.trim();
+      let to = document.getElementById("to").value.trim();
+      const message = document.getElementById("message").value;
 
-      if (!to || !message) {
-        toastr.error("Nomor dan pesan tidak boleh kosong");
-        return;
+      // Auto format nomor jadi internasional (contoh: 0812... => 62812...)
+      if (to.startsWith("0")) {
+        to = "62" + to.slice(1);
       }
+      to = to.replace(/\D/g, ""); // hanya angka
 
       try {
         const res = await fetch(`${API_BASE}/messages/send`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${localStorage.getItem("token")}`
+            "Authorization": `Bearer ${token}`
           },
           body: JSON.stringify({ to, text: message })
         });
-
         const data = await res.json();
-
         if (res.ok) {
           toastr.success("Pesan terkirim!");
           sendMessageForm.reset();
         } else {
+          console.error("Error detail:", data);
           toastr.error(data.message || "Gagal mengirim pesan");
         }
       } catch (err) {
+        console.error("Network error:", err);
         toastr.error("Tidak bisa mengirim pesan ke server");
       }
     });
   }
 
-  // ==== CEK STATUS WA ====
-  const statusEl = document.getElementById("waStatus");
-  if (statusEl) {
-    checkWAStatus();
-    setInterval(checkWAStatus, 5000);
-  }
-});
-
-async function checkWAStatus() {
-  try {
-    const res = await fetch(`${API_BASE}/wa/status`, {
-      headers: { "Authorization": `Bearer ${localStorage.getItem("token")}` }
-    });
-    const data = await res.json();
-
-    const statusEl = document.getElementById("waStatus");
-    const qrContainer = document.getElementById("qrContainer");
-    const qrImg = document.getElementById("qrImage");
-
-    if (data.state === "connected") {
-      statusEl.className = "alert alert-success animate__animated animate__pulse animate__infinite";
-      statusEl.textContent = "WA Terhubung";
-      if (qrContainer) qrContainer.style.display = "none";
-    } else {
-      statusEl.className = "alert alert-warning";
-      statusEl.textContent = "WA Tidak Terhubung";
-      if (data.qr && qrImg) {
-        qrContainer.style.display = "block";
-        qrImg.src = data.qr;
-        toastr.info("Scan QR Code untuk login WA");
+  // Cek Status WA
+  const waStatusEl = document.getElementById("waStatus");
+  if (waStatusEl) {
+    setInterval(async () => {
+      try {
+        const res = await fetch(`${API_BASE}/wa/status`, {
+          headers: { "Authorization": `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          if (data.state === "connected") {
+            waStatusEl.className = "alert alert-success";
+            waStatusEl.textContent = "WA Terhubung";
+          } else {
+            waStatusEl.className = "alert alert-warning";
+            waStatusEl.textContent = "WA Tidak Terhubung";
+          }
+        }
+      } catch {
+        waStatusEl.className = "alert alert-danger";
+        waStatusEl.textContent = "Gagal cek status";
       }
-    }
-  } catch (err) {
-    toastr.error("Gagal memeriksa status WA");
+    }, 5000);
   }
-}
+
+});
