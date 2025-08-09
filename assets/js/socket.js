@@ -1,4 +1,6 @@
-const socket = io({ auth: { token: localStorage.getItem("token") } });
+const socket = io("http://151.240.0.221:3000", {
+  auth: { token: localStorage.getItem("token") }
+});
 
 // Status WA
 socket.on("wa_state", (state) => {
